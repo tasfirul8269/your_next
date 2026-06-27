@@ -87,7 +87,7 @@ class ProductForm extends FormRequest
             'special_price_from' => ['nullable', 'date'],
             'special_price_to' => ['nullable', 'date', 'after_or_equal:special_price_from'],
             'special_price' => ['nullable', new Decimal, 'lt:price'],
-            'flash_sale_discount' => ['nullable', 'integer', 'min:1', 'max:99'],
+            'flash_sale_discount' => request()->has('flash_sale') ? ['required', 'integer', 'min:1', 'max:99'] : ['nullable', 'integer', 'min:1', 'max:99'],
             'visible_individually' => ['sometimes', 'required', 'in:0,1'],
             'status' => ['sometimes', 'required', 'in:0,1'],
             'guest_checkout' => ['sometimes', 'required', 'in:0,1'],

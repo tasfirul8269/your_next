@@ -364,7 +364,7 @@
                             type="number"
                             id="flash_sale_discount"
                             name="flash_sale_discount"
-                            ::rules="[]"
+                            ::rules="'required|numeric|min_value:1|max_value:99'"
                             :value="old('flash_sale_discount')"
                             label="Discount Percentage"
                             min="1"

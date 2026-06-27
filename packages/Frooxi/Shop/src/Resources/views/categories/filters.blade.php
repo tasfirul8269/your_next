@@ -490,7 +490,9 @@
                         .then((response) => {
                             this.isLoading = false;
 
-                            this.filters.available = response.data.data;
+                            this.filters.available = response.data.data.filter((filter) => {
+                                return filter.code !== 'color' && filter.code !== 'sleeve';
+                            });
                         })
                         .catch((error) => {
                             console.log(error);

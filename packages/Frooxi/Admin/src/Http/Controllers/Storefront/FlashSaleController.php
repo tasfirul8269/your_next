@@ -52,6 +52,7 @@ class FlashSaleController extends Controller
             'sku' => ['required', 'unique:products,sku', new \Frooxi\Core\Rules\Slug],
             'name' => 'required',
             'price' => 'required|numeric',
+            'flash_sale_discount' => 'required|numeric|min:1|max:99',
         ]);
 
         try {
