@@ -112,8 +112,8 @@
                     @if (core()->getConfigData('sales.checkout.shopping_cart.cart_page'))
                         {!! view_render_event('frooxi.shop.components.products.card.add_to_cart.before') !!}
 
-                        <!-- Add to Cart Button -->
-                        <template v-if="product.is_saleable">
+                        <!-- Add to Cart Button (configurable products must pick a size on the product page) -->
+                        <template v-if="product.is_saleable && product.type !== 'configurable'">
                             <button
                                 class="pointer-events-auto absolute bottom-3 z-10 flex h-11 w-11 items-center justify-center rounded-xl bg-zinc-950 text-white shadow-lg transition hover:bg-black md:hidden ltr:right-3 rtl:left-3"
                                 :aria-label="'@lang('shop::app.components.products.card.add-to-cart')'"
@@ -314,13 +314,26 @@
 
                     {!! view_render_event('frooxi.shop.components.products.card.add_to_cart.before') !!}
 
-                    <x-shop::button
-                        class="primary-button whitespace-nowrap px-8 py-2.5"
-                        :title="trans('shop::app.components.products.card.add-to-cart')"
-                        ::loading="isAddingToCart"
-                        ::disabled="! product.is_saleable || isAddingToCart"
-                        @click="addToCart()"
-                    />
+                    <template v-if="product.type === 'configurable'">
+                        <a
+                            :href="`{!! $productBaseUrl !!}/${product.url_key}`"
+                            @click.prevent="navigateToProduct()"
+                            class="primary-button flex items-center justify-center gap-2 whitespace-nowrap px-8 py-2.5"
+                        >
+                            <span class="icon-eye text-lg" aria-hidden="true"></span>
+                            View Product
+                        </a>
+                    </template>
+
+                    <template v-else>
+                        <x-shop::button
+                            class="primary-button whitespace-nowrap px-8 py-2.5"
+                            :title="trans('shop::app.components.products.card.add-to-cart')"
+                            ::loading="isAddingToCart"
+                            ::disabled="! product.is_saleable || isAddingToCart"
+                            @click="addToCart()"
+                        />
+                    </template>
 
                     {!! view_render_event('frooxi.shop.components.products.card.add_to_cart.after') !!}
 
@@ -424,6 +437,12 @@
                 },
 
                 addToCart() {
+                    // Configurable products require selecting a size/variant on the product page.
+                    if (this.product && this.product.type === 'configurable') {
+                        this.navigateToProduct();
+                        return;
+                    }
+
                     this.isAddingToCart = true;
 
                     this.$axios.post('{{ route("shop.api.checkout.cart.store") }}', {
