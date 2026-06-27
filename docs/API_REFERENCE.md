@@ -130,8 +130,7 @@ Admin routes are under `/{APP_ADMIN_URL}`. The default is `/admin`.
 | Sales | `/sales/orders`, `/sales/invoices`, `/sales/payment-methods` |
 | Customers | `/customers`, `/customers/reviews`, `/customers/groups` |
 | Storefront | `/storefront/hero-carousel`, `/storefront/flash-sale`, `/storefront/shipping-methods` |
-| Settings | `/settings`, `/settings/channels`, `/settings/currencies`, `/settings/exchange-rates`, `/settings/locales`, `/settings/inventory-sources`, `/settings/roles`, `/settings/users`, `/settings/themes` |
-| Configuration | `/configuration`, `/configuration/search`, `/configuration/cache-management/execute` |
+| Settings & Config | `/settings`, `/configuration/search`, `/configuration/cache-management/execute` |
 | Account | `/account`, `/two-factor/setup`, `/two-factor/enable`, `/two-factor/disable`, `/logout` |
 
 ## Admin AJAX and API routes used by the admin UI

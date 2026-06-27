@@ -80,15 +80,6 @@ The admin order creation view also references compare-item routes, but matching 
 | Method | Path | Used for |
 | --- | --- | --- |
 | `POST` | `/admin/settings` | Save unified settings page |
-| `POST` | `/admin/settings/currencies/create` | Create currency |
-| `PUT` | `/admin/settings/currencies/edit` | Update currency |
-| `POST` | `/admin/settings/exchange-rates/create` | Create exchange rate |
-| `PUT` | `/admin/settings/exchange-rates/edit` | Update exchange rate |
-| `POST` | `/admin/settings/locales/create` | Create locale |
-| `PUT` | `/admin/settings/locales/edit` | Update locale |
-| `POST` | `/admin/settings/users/create` | Create admin user |
-| `PUT` | `/admin/settings/users/edit` | Update admin user |
-| `POST` | `/admin/settings/themes/store` | Create or update theme customization |
 | `POST` | `/admin/configuration/cache-management/execute` | Clear configured caches |
 | `GET` | `/admin/configuration/search` | Configuration search |
 | `GET` | `/admin/datagrid/look-up` | DataGrid lookups |
