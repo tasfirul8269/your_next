@@ -1,0 +1,27 @@
+{
+    "name": "yournext/laravel-attribute",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Jitendra Singh",
+            "email": "jitendra@webkul.com"
+        }
+    ],
+    "require": {
+        "yournext/laravel-core": "dev-master"
+    },
+    "autoload": {
+        "psr-4": {
+            "Frooxi\\Attribute\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Frooxi\\Attribute\\Providers\\AttributeServiceProvider"
+            ],
+            "aliases": { }
+        }
+    },
+    "minimum-stability": "dev"
+}

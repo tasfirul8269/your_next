@@ -1,0 +1,41 @@
+# Keep the Docker build context small and reproducible.
+# (vendor / node_modules are installed inside the image, never copied from host.)
+
+.git
+.github
+.idea
+.vscode
+.qoder
+
+vendor
+node_modules
+**/node_modules
+
+# Build output (regenerated inside the prod image)
+public/themes/**/build
+public/build
+public/hot
+**/*.hot
+
+# Local env & secrets (prod .env lives on the server, never in the image)
+.env
+.env.*
+!.env.example
+
+# Runtime / caches / logs
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+bootstrap/cache/*.php
+
+# Tests & local tooling
+**/tests/e2e-pw/node_modules
+playwright-report
+test-results
+.phpunit.result.cache
+
+# Docs & scratch
+docs
+*.md
+!README.md

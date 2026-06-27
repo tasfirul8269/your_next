@@ -1,0 +1,26 @@
+{
+    "name": "yournext/laravel-shop",
+    "license": "MIT",
+    "description" : "Shop package for store front and customers",
+    "authors": [
+        {
+            "name": "Yournext",
+            "email": "support@yournext.com"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Frooxi\\Shop\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Frooxi\\Shop\\Providers\\ShopServiceProvider"
+            ],
+            "aliases": {}
+        }
+    },
+    "minimum-stability": "dev"
+}

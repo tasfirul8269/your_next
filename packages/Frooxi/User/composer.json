@@ -1,0 +1,27 @@
+{
+    "name": "yournext/laravel-user",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Jitendra Singh",
+            "email": "jitendra@webkul.com"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Frooxi\\User\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Frooxi\\User\\Providers\\UserServiceProvider"
+            ],
+            "aliases": {
+                "Bouncer": "Frooxi\\User\\Facades\\Bouncer"
+            }
+        }
+    },
+    "minimum-stability": "dev"
+}

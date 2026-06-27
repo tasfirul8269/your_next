@@ -1,0 +1,26 @@
+{
+    "name": "yournext/laravel-customer",
+    "description": "Customers Package for themeing and various features for customers",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Yournext",
+            "email": "support@yournext.com"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Frooxi\\Customer\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Frooxi\\Customer\\Providers\\CustomerServiceProvider"
+            ],
+            "aliases": {}
+        }
+    },
+    "minimum-stability": "dev"
+}

@@ -1,0 +1,27 @@
+{
+    "name": "yournext/laravel-payment",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Jitendra Singh",
+            "email": "jitendra@webkul.com"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Frooxi\\Payment\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Frooxi\\Payment\\Providers\\PaymentServiceProvider"
+            ],
+            "aliases": {
+                "Bouncer": "Frooxi\\Payment\\Facades\\Bouncer"
+            }
+        }
+    },
+    "minimum-stability": "dev"
+}

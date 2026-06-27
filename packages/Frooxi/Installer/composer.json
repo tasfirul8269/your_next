@@ -1,0 +1,26 @@
+{
+    "name": "yournext/laravel-installer",
+    "license": "MIT",
+    "description": "Installer package",
+    "authors": [
+        {
+            "name": "Yournext",
+            "email": "support@yournext.com"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Frooxi\\Installer\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Frooxi\\Installer\\Providers\\InstallerServiceProvider"
+            ],
+            "aliases": {}
+        }
+    },
+    "minimum-stability": "dev"
+}

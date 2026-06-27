@@ -1,0 +1,133 @@
+{
+    "name": "nextoutfit/nextoutfit",
+    "type": "project",
+    "description": "Next Outfit Laravel E-Commerce",
+    "keywords": [
+        "framework",
+        "laravel"
+    ],
+    "license": "MIT",
+    "require": {
+        "php": "^8.3",
+        "ext-calendar": "*",
+        "ext-curl": "*",
+        "ext-intl": "*",
+        "ext-mbstring": "*",
+        "ext-openssl": "*",
+        "ext-pdo": "*",
+        "ext-pdo_mysql": "*",
+        "ext-tokenizer": "*",
+        "astrotomic/laravel-translatable": "^11.16",
+        "barryvdh/laravel-dompdf": "^2.0.0|^3.0",
+        "cloudinary-labs/cloudinary-laravel": "^2.0",
+        "diglactic/laravel-breadcrumbs": "^10.0",
+        "enshrined/svg-sanitize": "^0.22.0",
+        "guzzlehttp/guzzle": "^7.0.1",
+        "intervention/image": "^2.4|^3.0",
+        "kalnoy/nestedset": "^6.0",
+        "khaled.alshamaa/ar-php": "^6.0.0",
+        "konekt/concord": "^1.16",
+        "laravel/cashier": "^16.0",
+        "laravel/framework": "^12.0",
+        "laravel/sanctum": "^4.3",
+        "laravel/socialite": "^5.0",
+        "laravel/tinker": "^2.10",
+        "laravel/ui": "^4.0",
+        "maatwebsite/excel": "^3.1.46",
+        "mpdf/mpdf": "^8.2",
+        "nesbot/carbon": "^3.0",
+        "pragmarx/google2fa": "^8.0",
+        "predis/predis": "^2.2",
+        "prettus/l5-repository": "^2.6",
+        "simplesoftwareio/simple-qrcode": "^4.2",
+        "spatie/laravel-responsecache": "^7.4",
+        "stevebauman/purify": "^6.3"
+    },
+    "require-dev": {
+        "bagisto/laravel-datafaker": "2.3.*",
+        "barryvdh/laravel-debugbar": "^3.8",
+        "fakerphp/faker": "^1.23",
+        "laravel/boost": "^2.1",
+        "laravel/pint": "^1.19",
+        "mockery/mockery": "^1.6",
+        "nunomaduro/collision": "^8.0",
+        "pestphp/pest": "^3.0",
+        "pestphp/pest-plugin-laravel": "^3.0",
+        "phpunit/phpunit": "^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/",
+            "Database\\Factories\\": "database/factories/",
+            "Database\\Seeders\\": "database/seeders/",
+            "Frooxi\\Admin\\": "packages/Frooxi/Admin/src",
+            "Frooxi\\Attribute\\": "packages/Frooxi/Attribute/src",
+            "Frooxi\\Category\\": "packages/Frooxi/Category/src",
+            "Frooxi\\Checkout\\": "packages/Frooxi/Checkout/src",
+            "Frooxi\\Core\\": "packages/Frooxi/Core/src",
+            "Frooxi\\Customer\\": "packages/Frooxi/Customer/src",
+            "Frooxi\\DataGrid\\": "packages/Frooxi/DataGrid/src",
+            "Frooxi\\Installer\\": "packages/Frooxi/Installer/src",
+            "Frooxi\\Inventory\\": "packages/Frooxi/Inventory/src",
+            "Frooxi\\Payment\\": "packages/Frooxi/Payment/src",
+            "Frooxi\\Product\\": "packages/Frooxi/Product/src",
+            "Frooxi\\Sales\\": "packages/Frooxi/Sales/src",
+            "Frooxi\\Shipping\\": "packages/Frooxi/Shipping/src",
+            "Frooxi\\Shop\\": "packages/Frooxi/Shop/src",
+            "Frooxi\\Theme\\": "packages/Frooxi/Theme/src",
+            "Frooxi\\User\\": "packages/Frooxi/User/src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/",
+            "Frooxi\\Admin\\Tests\\": "packages/Frooxi/Admin/tests",
+            "Frooxi\\Core\\Tests\\": "packages/Frooxi/Core/tests",
+            "Frooxi\\Customer\\Tests\\": "packages/Frooxi/Customer/tests",
+            "Frooxi\\Installer\\Tests\\": "packages/Frooxi/Installer/tests",
+            "Frooxi\\Shop\\Tests\\": "packages/Frooxi/Shop/tests"
+        }
+    },
+    "scripts": {
+        "post-autoload-dump": [
+            "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
+            "@php artisan package:discover --ansi"
+        ],
+        "post-create-project-cmd": [
+            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
+            "@php artisan key:generate --ansi"
+        ]
+    },
+    "extra": {
+        "laravel": {
+            "dont-discover": [
+                "intervention/image",
+                "laravel/socialite"
+            ]
+        }
+    },
+    "repositories": [{
+        "type": "path",
+        "url": "packages/*/*",
+        "options": {
+            "symlink": true
+        }
+    }],
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "php-http/discovery": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "support": {
+        "issues": "https://github.com/nextoutfit/nextoutfit/issues",
+        "forum": "https://forums.nextoutfit.com",
+        "source": "https://github.com/nextoutfit/nextoutfit",
+        "docs": "https://devdocs.nextoutfit.com"
+    }
+}

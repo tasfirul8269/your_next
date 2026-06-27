@@ -1,0 +1,26 @@
+{
+    "name": "yournext/laravel-admin",
+    "license": "MIT",
+    "description" : "Admin package",
+    "authors": [
+        {
+            "name": "Yournext",
+            "email": "support@yournext.com"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Frooxi\\Admin\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Frooxi\\Admin\\Providers\\AdminServiceProvider"
+            ],
+            "aliases": {}
+        }
+    },
+    "minimum-stability": "dev"
+}

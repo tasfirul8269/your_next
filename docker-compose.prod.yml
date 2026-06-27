@@ -1,0 +1,65 @@
+# Production stack.
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# - app:   the built PHP-FPM image (code + vendor + compiled assets baked in)
+# - nginx: serves public/ and proxies PHP to app:9000
+# - mysql: MySQL 8 (omit/point elsewhere if your VPS already runs a shared DB — see below)
+#
+# REVERSE-PROXY FRIENDLY: nginx binds to ${APP_PORT:-8080} on the host, NOT 80/443.
+# Put your VPS's existing reverse proxy (Nginx/Traefik/Caddy) in front and route a
+# domain to 127.0.0.1:${APP_PORT}. If this is the only thing on the box, set APP_PORT=80.
+#
+# The real production .env lives on the server and is mounted in (never baked into the
+# image). IMAGE defaults to the GHCR image the CI pipeline pushes; override locally to build.
+
+services:
+  app:
+    image: "${IMAGE:-ghcr.io/nextoutfit/nextoutfit:latest}"
+    build:
+      context: .
+      dockerfile: docker/prod/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./.env:/var/www/html/.env:ro
+      - public_assets:/var/www/html/public-shared
+      - storage_data:/var/www/html/storage
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:80"
+    volumes:
+      - ./docker/prod/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - public_assets:/var/www/html/public:ro
+    depends_on:
+      - app
+
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: "${DB_DATABASE}"
+      MYSQL_USER: "${DB_USERNAME}"
+      MYSQL_PASSWORD: "${DB_PASSWORD}"
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
+    volumes:
+      - dbdata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # To use an EXTERNAL/managed MySQL the VPS already provides instead of this container:
+    #   1. remove this `mysql` service and the app's depends_on/mysql block,
+    #   2. set DB_HOST in .env to the external host.
+
+volumes:
+  dbdata:
+  public_assets:
+  storage_data:

@@ -1,0 +1,24 @@
+{
+    "name": "yournext/laravel-checkout",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Yournext",
+            "email": "support@yournext.com"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Frooxi\\Checkout\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Frooxi\\Checkout\\Providers\\CheckoutServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev"
+}

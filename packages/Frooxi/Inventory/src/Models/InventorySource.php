@@ -1,0 +1,24 @@
+<?php
+
+namespace Frooxi\Inventory\Models;
+
+use Frooxi\Inventory\Contracts\InventorySource as InventorySourceContract;
+use Frooxi\Inventory\Database\Factories\InventorySourceFactory;
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class InventorySource extends Model implements InventorySourceContract
+{
+    use HasFactory;
+
+    protected $guarded = ['_token'];
+
+    /**
+     * Create a new factory instance for the model.
+     */
+    protected static function newFactory(): Factory
+    {
+        return InventorySourceFactory::new();
+    }
+}
