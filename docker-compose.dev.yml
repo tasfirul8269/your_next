@@ -54,7 +54,8 @@ services:
       MYSQL_PASSWORD: "${DB_PASSWORD:-secret}"
       MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD:-rootsecret}"
     ports:
-      - "3306:3306"
+      # Host port is configurable so the dev DB can coexist with a host MySQL already on 3306.
+      - "${DB_FORWARD_PORT:-3306}:3306"
     volumes:
       - dbdata:/var/lib/mysql
     healthcheck:
