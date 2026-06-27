@@ -5217,7 +5217,7 @@ return [
             ],
 
             'powered-by' => [
-                'description' => 'Powered by :yournext, an open-source project by :webkul.',
+                'description' => 'Powered by :yournext, crafted by Frooxi (frooxi.com).',
             ],
         ],
 

@@ -7,8 +7,8 @@ use Frooxi\Core\Eloquent\Repository;
 /**
  * Order Address Repository
  *
- * @author    Jitendra Singh <jitendra@webkul.com>
- * @copyright 2018 Frooxi Software Pvt Ltd (http://www.webkul.com)
+ * @author    Frooxi <hello@frooxi.com>
+ * @copyright Frooxi (https://frooxi.com)
  */
 class OrderAddressRepository extends Repository
 {

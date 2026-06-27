@@ -448,7 +448,7 @@ test("should edit an address", async ({ page }) => {
     await page.getByLabel("More Options").first().click();
     await page.getByRole("link", { name: "Edit" }).click();
     await page.getByPlaceholder("Company Name").click();
-    await page.getByPlaceholder("Company Name").fill("webkul1");
+    await page.getByPlaceholder("Company Name").fill("testuser1");
     await page.getByPlaceholder("First Name").click();
     await page.getByPlaceholder("First Name").click();
     await page.getByPlaceholder("First Name").fill("User1");

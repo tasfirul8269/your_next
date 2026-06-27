@@ -637,11 +637,11 @@ async function createDownloadableProduct(adminPage) {
     await adminPage.locator('select[name="type"]').selectOption("url");
     await adminPage
         .locator('input[name="url"]')
-        .fill("https://bagisto.com/en/");
+        .fill("https://frooxi.com/");
     await adminPage.locator('select[name="sample_type"]').selectOption("url");
     await adminPage
         .locator('input[name="sample_url"]')
-        .fill("https://bagisto.com/en/");
+        .fill("https://frooxi.com/");
 
     /**
      * Saving the Downloadable Link.

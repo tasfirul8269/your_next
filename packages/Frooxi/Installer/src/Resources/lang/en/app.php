@@ -132,10 +132,10 @@ return [
 
         'core' => [
             'channels' => [
-                'meta-description' => 'Demo store meta description',
-                'meta-keywords' => 'Demo store meta keyword',
-                'meta-title' => 'Demo store',
-                'name' => 'Default',
+                'meta-description' => 'Your Next Outfit — shop the latest clothing collections online.',
+                'meta-keywords' => 'Your Next Outfit, clothing, fashion, online store',
+                'meta-title' => 'Your Next Outfit',
+                'name' => 'Your Next Outfit',
             ],
 
             'currencies' => [

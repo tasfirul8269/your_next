@@ -4,11 +4,11 @@ Guidance for Claude Code (and any developer) working in this repository. **This 
 
 ## Project Overview
 
-"Next Outfit" — a Laravel 12 e-commerce storefront for an online clothing shop. Originally forked from **Bagisto** (open-source Laravel e-commerce by Webkul), then heavily trimmed and customized. PHP 8.3+, Vue 3 + Alpine.js, Tailwind CSS 3, Vite 5, MySQL.
+"Your Next Outfit" — a Laravel 12 e-commerce storefront for an online clothing shop, built by **Frooxi** (frooxi.com). PHP 8.3+, Vue 3 + Alpine.js, Tailwind CSS 3, Vite 5, MySQL.
 
 - **`Frooxi`** is the internal PHP namespace / the dev company. **`Next Outfit` / `nextoutfit`** is the client storefront brand (used in user-facing strings and artisan command names).
 - Target market is Bangladesh: phone-number + OTP customer auth, SSLCommerz & bKash payment gateways, `Asia/Dhaka` timezone.
-- **16 packages** under `packages/Frooxi/`: Admin, Attribute, Category, Checkout, Core, Customer, DataGrid, Installer, Inventory, Payment, Product, Sales, Shipping, Shop, Theme, User. (Upstream Bagisto's other modules — Tax, CartRule, CMS, Marketing, RMA, GDPR, Paypal/Stripe/Razorpay/PayU, etc. — are **not** part of this fork. Don't reference them.)
+- **16 packages** under `packages/Frooxi/`: Admin, Attribute, Category, Checkout, Core, Customer, DataGrid, Installer, Inventory, Payment, Product, Sales, Shipping, Shop, Theme, User. (Other optional e-commerce modules — Tax, CartRule, CMS, Marketing, RMA, GDPR, Paypal/Stripe/Razorpay/PayU, etc. — are **not** part of this project. Don't reference them.)
 
 ## Common Commands
 
@@ -102,7 +102,7 @@ Two session guards (`config/auth.php`): `admin` → `Frooxi\User\Models\Admin`, 
 ## Storage & external services
 - **File storage defaults to Cloudinary** (`FILESYSTEM_DISK=cloudinary`); set to `public` for local disk. Don't assume local uploads persist across deploys.
 - Cache = file, queue = sync, sessions = database by default. `predis/predis` is installed but **not** wired up.
-- `app/Providers/AppServiceProvider.php` keeps a deliberate Eloquent `morphMap` bridging legacy `Webkul\*` polymorphic type strings — **do not remove** until a DB check confirms no `Webkul\*` strings remain in morph columns.
+- Polymorphic types use `Frooxi\*` class names. Two historical migrations (`fix_webkul_morph_types_to_frooxi`, `fix_remaining_webkul_morph_types`) convert any legacy type strings on migrate; they're inert on a fresh install.
 
 ## Safety rails
 - Run `vendor/bin/pint --test` before finishing any PHP change.

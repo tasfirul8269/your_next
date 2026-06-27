@@ -223,4 +223,4 @@ See [ARCHITECTURE.md](ARCHITECTURE.md#theming) for the theme-resolution mechanis
 
 **Web wizard routes** (`src/Routes/web.php`): `GET /install`, `POST /install/api/run-migration`, `POST /install/api/run-seeder`, `POST /install/api/seed-sample-products`, `POST /install/api/create-admin-user`.
 
-**Note**: The installer's locale/currency prompts still list all the historical Bagisto locales (Arabic, Bengali, Catalan, German, English, Spanish, Persian, French, Hebrew, Hindi, Indonesian, Italian, Japanese, Dutch, Polish, Portuguese-BR, Russian, Sinhala, Turkish, Ukrainian, Chinese) even though only `en` translation files actually ship in `lang/` — selecting anything but English will produce missing-translation errors at runtime.
+**Note**: The installer's currency list is broad, but only `en` translation files actually ship in `lang/`, and the store runs English-only — selecting another locale would produce missing-translation errors at runtime.

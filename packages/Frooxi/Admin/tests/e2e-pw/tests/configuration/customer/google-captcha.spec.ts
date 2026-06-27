@@ -3,7 +3,7 @@ import { test, expect } from "../../../setup";
 /**
  * Project ID for Google Captcha.
  */
-const projectID = 'bagisto-test-project';
+const projectID = 'frooxi-test-project';
 
 /**
  * API Key for Google Captcha.
