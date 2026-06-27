@@ -30,7 +30,11 @@ COPY packages ./packages
 # Path-repository packages must be present before install resolves them.
 # The runtime image (stage 3) provides gd/intl/bcmath/calendar/pdo_mysql; this minimal
 # composer image doesn't, so skip the platform check here (deps are resolved from the lock).
-RUN composer install --no-dev --no-scripts --prefer-dist --optimize-autoloader --no-interaction --ignore-platform-reqs
+# GitHub's codeload zip endpoint intermittently returns HTTP 400; retry the fast
+# dist install, then fall back to --prefer-source (git clone) which always works.
+RUN composer install --no-dev --no-scripts --prefer-dist --optimize-autoloader --no-interaction --ignore-platform-reqs \
+    || composer install --no-dev --no-scripts --prefer-dist --optimize-autoloader --no-interaction --ignore-platform-reqs \
+    || composer install --no-dev --no-scripts --prefer-source --optimize-autoloader --no-interaction --ignore-platform-reqs
 
 # ---------------------------------------------------------------------------
 # Stage 3: final runtime — PHP-FPM + extensions + app + built artifacts
