@@ -1314,23 +1314,25 @@
         // Desktop: full-width "Add to cart" bar
         var cta;
         var isConfigurable = p.type === 'configurable';
+        // Configurable products need a size chosen on the product page, so never add-to-cart from the card.
+        var canAddToCart = isSaleable && !isConfigurable;
 
         if (isMobile) {
             var cartIcon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>';
             var eyeIcon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
             cta = '<button data-role="cta" '
-                + 'onclick="event.stopPropagation();event.preventDefault();'+(isSaleable?'pcAddToCartById(this,'+p.id+')':'window.location.href=\''+url+'\'')+'" '
-                + 'ontouchend="event.stopPropagation();event.preventDefault();'+(isSaleable?'pcAddToCartById(this,'+p.id+')':'window.location.href=\''+url+'\'')+'" '
+                + 'onclick="event.stopPropagation();event.preventDefault();'+(canAddToCart?'pcAddToCartById(this,'+p.id+')':'window.location.href=\''+url+'\'')+'" '
+                + 'ontouchend="event.stopPropagation();event.preventDefault();'+(canAddToCart?'pcAddToCartById(this,'+p.id+')':'window.location.href=\''+url+'\'')+'" '
                 + 'style="position:absolute;bottom:10px;right:10px;z-index:4;width:44px;height:44px;background:#111;color:#fff;border:none;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;pointer-events:auto;-webkit-tap-highlight-color:transparent;">'
-                + (isSaleable ? cartIcon : eyeIcon)
+                + (canAddToCart ? cartIcon : eyeIcon)
                 + '</button>';
         } else {
-            var label = isSaleable ? 'Add to cart' : 'View product';
-            var hoverIcon = isSaleable
+            var label = canAddToCart ? 'Add to cart' : 'View product';
+            var hoverIcon = canAddToCart
                 ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>'
                 : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
             cta = '<div style="position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;pointer-events:auto;">'
-                + '<button data-role="cta" onclick="event.stopPropagation();event.preventDefault();'+(isSaleable?'pcAddToCart(event,'+p.id+')':'window.location.href=\''+url+'\'')+'" '
+                + '<button data-role="cta" onclick="event.stopPropagation();event.preventDefault();'+(canAddToCart?'pcAddToCart(event,'+p.id+')':'window.location.href=\''+url+'\'')+'" '
                 + 'style="display:inline-flex;align-items:center;justify-content:center;height:44px;padding:0 28px;background:#111;color:#fff;border:none;outline:none;border-radius:5px;cursor:pointer;transform:translateY(0);transition:transform .3s ease;overflow:hidden;position:relative;min-width:140px;pointer-events:auto;-webkit-tap-highlight-color:transparent;">'
                 + '<span data-role="btn-text" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;font-family:Montserrat,sans-serif;letter-spacing:.2px;transition:transform .28s ease,opacity .28s ease;transform:translateY(0);opacity:1;z-index:1;">'+label+'</span>'
                 + '<span data-role="btn-icon" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#111;transition:transform .28s ease,opacity .28s ease;transform:translateY(100%);opacity:1;z-index:2;">'+hoverIcon+'</span>'
