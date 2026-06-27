@@ -1,97 +1,153 @@
-# Docker & Deployment
+# Deployment
 
-This project ships two Docker "flavors" and a GitHub Actions pipeline that auto-deploys to a VPS on push to `main`.
+The repository includes a production Docker Compose stack and a GitHub Actions workflow for VPS deployment.
 
-- **Development flavor** — `docker-compose.dev.yml` + `docker/dev/Dockerfile`. Source is bind-mounted; Vite runs with hot-reload; mail is caught locally.
-- **Production flavor** — `docker-compose.prod.yml` + `docker/prod/Dockerfile`. A lean, multi-stage image with code + production deps + pre-built assets baked in, served by Nginx. Reverse-proxy friendly (no hardcoded 80/443).
+## Production stack
 
-> Both stacks have been **built and deployed on the production VPS** — dev on port `8000` and prod on port `8600` (behind the host's nginx reverse proxy). The commands below reflect that working setup.
+Production Compose file:
 
----
-
-## Development
-
-```bash
-cp .env.example .env
-# In .env set: DB_HOST=mysql, DB_DATABASE=nextoutfit, DB_USERNAME=nextoutfit,
-#              DB_PASSWORD=secret, MAIL_HOST=mailpit, MAIL_PORT=1025
-docker compose -f docker-compose.dev.yml up --build
+```text
+docker-compose.prod.yml
 ```
 
-Then, the first time, install the app inside the running app container:
+Services:
 
-```bash
-docker compose -f docker-compose.dev.yml exec app php artisan nextoutfit:install
-# or, non-interactively, run migrate + seed yourself
+| Service | Purpose |
+| --- | --- |
+| `app` | PHP-FPM runtime with Composer dependencies and built assets |
+| `nginx` | Serves `public/` and proxies PHP requests to `app:9000` |
+| `mysql` | MySQL 8 database |
+
+Persistent volumes:
+
+| Volume | Purpose |
+| --- | --- |
+| `dbdata` | MySQL data |
+| `public_assets` | Shared public assets for Nginx |
+| `storage_data` | Laravel storage |
+
+The Nginx container binds to `${APP_PORT:-8080}` on the host. Put a host-level reverse proxy in front of it for HTTPS.
+
+## Production environment
+
+Create a real `.env` on the server. Do not bake secrets into the image.
+
+Required production values include:
+
+```dotenv
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://your-domain.example
+APP_ADMIN_URL=admin
+
+DB_CONNECTION=mysql
+DB_HOST=mysql
+DB_PORT=3306
+DB_DATABASE=your_database
+DB_USERNAME=your_database_user
+DB_PASSWORD=your_database_password
+DB_ROOT_PASSWORD=your_root_password
+
+APP_PORT=8080
+QUEUE_CONNECTION=sync
+CACHE_STORE=file
+SESSION_DRIVER=database
 ```
 
-| Service | URL | Purpose |
-|---|---|---|
-| app | http://localhost:8000 | The Laravel app (`php artisan serve`) |
-| vite-admin | http://localhost:5173 | Admin Vite HMR dev server |
-| vite-shop | http://localhost:5174 | Shop Vite HMR dev server |
-| mailpit | http://localhost:8025 | Catches all outgoing email |
-| adminer | http://localhost:8081 | DB browser (server `mysql`, user/pass from `.env`) |
+Set storage and payment credentials for the environment:
 
-Xdebug is installed but off; flip `xdebug.mode = debug` in `docker/dev/php.ini` and restart the app container to step-debug (IDE on port 9003).
-
----
-
-## Production (manual)
-
-This is the method currently used for this project (the GitHub Actions pipeline below is optional).
-
-```bash
-# On the server, with a real production .env present (see below):
-APP_PORT=8600 docker compose -f docker-compose.prod.yml up -d --build
-docker compose -f docker-compose.prod.yml exec -T app php artisan migrate --force
-docker compose -f docker-compose.prod.yml exec -T app php artisan db:seed --class="Frooxi\Installer\Database\Seeders\DatabaseSeeder" --force
-docker compose -f docker-compose.prod.yml exec -T app php artisan db:seed --class="Database\Seeders\SizeOptionsSeeder" --force
+```dotenv
+FILESYSTEM_DISK=cloudinary
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+CLOUDINARY_URL=cloudinary://your_api_key:your_api_secret@your_cloud_name
 ```
 
-### Ports & reverse proxy
-The `nginx` service binds to `${APP_PORT:-8080}` on the host — **not** 80/443 — so it won't collide with the other projects on the VPS.
+Add SSLCommerz and bKash values based on the payment controller and config files used by the project.
 
-- **VPS already has a reverse proxy** (Nginx/Traefik/Caddy in front of everything): leave `APP_PORT=8080` (or any free port), and point a vhost / router at `127.0.0.1:8080`. Terminate TLS at the proxy.
-- **This is the only app on the box**: set `APP_PORT=80` in `.env` and let it serve directly (add your own TLS, e.g. a Caddy/Certbot sidecar).
+## Manual production deploy
 
-### Database
-The compose file includes a `mysql` container (data in the `dbdata` volume). If the VPS already centralizes MySQL for its other projects, remove the `mysql` service (and the app's `depends_on`) and set `DB_HOST` in `.env` to that external database instead.
+From the project directory on the server:
 
-### The production `.env`
-The image does **not** contain a `.env` (it's `.dockerignore`d). Create `/var/www/html/.env` (or wherever `VPS_PROJECT_PATH` points) **on the server once**, and it's mounted read-only into the container. It persists across deploys because it lives on the host, not in the image. Set at minimum: `APP_KEY`, `APP_URL`, `APP_ENV=production`, `APP_DEBUG=false`, the `DB_*` values, the `DB_ROOT_PASSWORD` (used by the mysql container), `APP_PORT`, the Cloudinary keys, the SSLCommerz / bKash / SSLWireless credentials, and mail settings.
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml exec app php artisan migrate --force
+docker compose -f docker-compose.prod.yml exec app php artisan optimize:clear
+docker compose -f docker-compose.prod.yml exec app php artisan optimize
+docker compose -f docker-compose.prod.yml exec app php artisan indexer:index --type=price --type=inventory --type=flat --mode=full
+```
 
-There is **no Redis/queue worker** in the prod stack because the app uses file cache + sync queue by default. If you switch `QUEUE_CONNECTION` to `database`/`redis`, add a worker container running `php artisan queue:work` (and a Redis service if needed).
+Run seeders only when you intentionally need base data:
 
----
+```bash
+docker compose -f docker-compose.prod.yml exec app php artisan db:seed --class="Frooxi\\Installer\\Database\\Seeders\\DatabaseSeeder" --force
+docker compose -f docker-compose.prod.yml exec app php artisan db:seed --class="Database\\Seeders\\SizeOptionsSeeder" --force
+```
 
-## CI/CD — auto-deploy on push to `main`
+Do not run `nextoutfit:install` on a production database with real data. It wipes and rebuilds the schema.
 
-`.github/workflows/deploy.yml` does, on every push to `main`:
+## GitHub Actions deploy workflow
 
-1. **build** — builds `docker/prod/Dockerfile`, tags it `ghcr.io/<owner>/<repo>:latest` and `:<git-sha>`, and pushes to GitHub Container Registry (GHCR) using the built-in `GITHUB_TOKEN` (no extra registry secret).
-2. **deploy** — SSHes into the VPS and runs: `docker compose -f docker-compose.prod.yml pull app` → `up -d` → `php artisan migrate --force` → `optimize:clear` → `optimize`.
+Workflow file:
 
-### One-time VPS setup (before the pipeline can work)
-1. Install Docker + the Compose plugin on the VPS.
-2. Clone this repo once to `VPS_PROJECT_PATH` (the pipeline only needs `docker-compose.prod.yml`, `docker/prod/nginx.conf`, and your `.env` to be present there — it pulls the app image rather than building on the box).
-3. Create the production `.env` there (see above).
-4. Ensure the SSH user can run `docker` (in the `docker` group) and can `docker login ghcr.io` (the pipeline logs in for you using `GITHUB_TOKEN`).
+```text
+.github/workflows/deploy.yml
+```
 
-### GitHub repository secrets to add
-> The new owner adds these once they have repo ownership — they're intentionally left as placeholders.
+The workflow:
 
-| Secret | Meaning |
-|---|---|
+1. Runs on pushes to `main` or manual dispatch.
+2. Builds the production image with `docker/prod/Dockerfile`.
+3. Pushes the image to GitHub Container Registry.
+4. SSHes into the VPS.
+5. Runs Docker Compose.
+6. Runs migrations and Laravel optimize commands.
+
+Required repository secrets:
+
+| Secret | Purpose |
+| --- | --- |
 | `VPS_HOST` | VPS hostname or IP |
-| `VPS_PORT` | SSH port (usually `22`) |
-| `VPS_USERNAME` | SSH user (must be able to run Docker) |
-| `VPS_SSH_KEY` | That user's private SSH key (PEM) |
-| `VPS_PROJECT_PATH` | Absolute path to the repo checkout on the VPS |
+| `VPS_PORT` | SSH port |
+| `VPS_USERNAME` | SSH user |
+| `VPS_SSH_KEY` | Private SSH key for the deploy user |
+| `VPS_PROJECT_PATH` | Absolute path to the project on the VPS |
 
-`GITHUB_TOKEN` is provided automatically by Actions — used both to push to GHCR and to log the VPS into GHCR for the pull.
+The workflow uses GitHub's `GITHUB_TOKEN` for GHCR authentication.
 
-### Notes
-- The image registry path defaults to `ghcr.io/nextoutfit/nextoutfit` in `docker-compose.prod.yml`; the pipeline overrides it to the actual `ghcr.io/<owner>/<repo>` (lowercased) and pins the exact `:<sha>` via the `IMAGE` env var, so each deploy runs the image it just built.
-- Migrations run as an explicit pipeline step (not in the container entrypoint) so a bad migration surfaces as a failed deploy instead of a crash-looping container.
-- First deploy: the GHCR package may be private by default — either keep the VPS logged in (the pipeline does this) or mark the package public.
+## Reverse proxy notes
+
+Terminate HTTPS at the host reverse proxy. Forward requests to:
+
+```text
+127.0.0.1:${APP_PORT}
+```
+
+Make sure the proxy preserves:
+
+- `Host`
+- `X-Forwarded-For`
+- `X-Forwarded-Proto`
+
+The app trusts proxies in `bootstrap/app.php`.
+
+## Post-deploy checks
+
+After each deploy, check:
+
+```bash
+docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml logs --tail=100 app
+docker compose -f docker-compose.prod.yml logs --tail=100 nginx
+```
+
+Then verify:
+
+- Storefront home page loads.
+- Admin login page loads.
+- Product listing returns products.
+- Cart add works.
+- Checkout reaches payment selection.
+- SSLCommerz and bKash callback URLs match gateway dashboard settings.
+- Uploaded media resolves from the configured disk.

@@ -1,89 +1,177 @@
-# Setup & Deployment
+# Setup and deployment
 
-## Prerequisites
+This file covers local setup and the commands a new developer needs before working on the project. Production deployment details are in [DEPLOYMENT.md](DEPLOYMENT.md).
 
-- PHP 8.3+ with extensions: `calendar`, `curl`, `intl`, `mbstring`, `openssl`, `pdo`, `pdo_mysql`, `tokenizer`
-- Composer 2
-- Node.js (for Vite builds — version not pinned in any config; use an LTS that supports Vite 5)
-- MySQL (the installer's DB wizard only supports `mysql` as a connection type)
-- A Cloudinary account (default file storage — see below) **or** reconfigure `FILESYSTEM_DISK` to `public`/`local` if you don't want to use Cloudinary
+## Requirements
 
-> **Recommended:** use the Docker stacks (dev + prod) instead of a manual setup — see **[DEPLOYMENT.md](DEPLOYMENT.md)** and the project **[README](../README.md)**. The steps below cover the manual (non-Docker) path if you need it.
+For Docker setup:
 
-## First-time install
+- Docker Desktop or Docker Engine with Compose.
+
+For non-Docker setup:
+
+- PHP 8.3 with `calendar`, `curl`, `intl`, `mbstring`, `openssl`, `pdo`, `pdo_mysql`, and `tokenizer`.
+- Composer 2.
+- Node.js 20.
+- MySQL 8.
+
+## Environment file
+
+Create `.env` from the example:
+
+```bash
+cp .env.example .env
+```
+
+Important variables:
+
+| Variable | Purpose |
+| --- | --- |
+| `APP_NAME` | Application name shown by Laravel |
+| `APP_URL` | Public app URL |
+| `APP_ADMIN_URL` | Admin path segment. Default is `admin` |
+| `APP_TIMEZONE` | Default timezone. The example uses `Asia/Dhaka` |
+| `APP_CURRENCY` | Default currency. The example uses `BDT` |
+| `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | MySQL connection |
+| `DB_ROOT_PASSWORD` | MySQL root password used by Docker Compose |
+| `FILESYSTEM_DISK` | Active storage disk. `public` and `cloudinary` are configured |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_URL` | Cloudinary storage settings |
+| `MAIL_MAILER`, `MAIL_HOST`, `MAIL_PORT` | Mail settings |
+| `QUEUE_CONNECTION` | Queue driver. The example uses `sync` |
+| `CACHE_STORE` | Cache driver. The example uses `file` |
+
+The example file currently contains `FILESYSTEM_DISK` twice. Laravel will use the later value when the environment is parsed. Keep only the intended value in a real environment file.
+
+## Docker development setup
+
+Set the development database and mail values:
+
+```dotenv
+DB_HOST=mysql
+DB_DATABASE=nextoutfit
+DB_USERNAME=nextoutfit
+DB_PASSWORD=secret
+DB_ROOT_PASSWORD=rootsecret
+MAIL_HOST=mailpit
+MAIL_PORT=1025
+```
+
+Start the stack:
+
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+
+Services:
+
+| Service | URL or port |
+| --- | --- |
+| App | `http://localhost:8000` |
+| Admin | `http://localhost:8000/admin` |
+| Admin Vite | `5173` |
+| Shop Vite | `5174` |
+| MySQL | `${DB_FORWARD_PORT:-3306}` |
+| Mailpit | `http://localhost:8025` |
+| Adminer | `http://localhost:8081` |
+
+Initialize the app:
+
+```bash
+docker compose -f docker-compose.dev.yml exec app php artisan key:generate
+docker compose -f docker-compose.dev.yml exec app php artisan migrate --force
+docker compose -f docker-compose.dev.yml exec app php artisan db:seed --class="Frooxi\\Installer\\Database\\Seeders\\DatabaseSeeder" --force
+docker compose -f docker-compose.dev.yml exec app php artisan db:seed --class="Database\\Seeders\\SizeOptionsSeeder" --force
+docker compose -f docker-compose.dev.yml exec app php artisan indexer:index --type=price --type=inventory --type=flat --mode=full
+```
+
+If you want sample clothing data, review the root seeders in `database/seeders/` before running them.
+
+## Non-Docker setup
+
+Install PHP dependencies:
 
 ```bash
 composer install
-cp .env.example .env   # the installer does this for you too if you skip this step
+php artisan key:generate
+```
+
+Install frontend dependencies for the active builds:
+
+```bash
+cd packages/Frooxi/Admin && npm install
+cd ../Shop && npm install
+cd ../Installer && npm install
+```
+
+Run migrations and seeders from the repository root:
+
+```bash
+php artisan migrate --force
+php artisan db:seed --class="Frooxi\\Installer\\Database\\Seeders\\DatabaseSeeder" --force
+php artisan db:seed --class="Database\\Seeders\\SizeOptionsSeeder" --force
+php artisan indexer:index --type=price --type=inventory --type=flat --mode=full
+```
+
+Run the app:
+
+```bash
+php artisan serve
+```
+
+Run Vite in separate terminals:
+
+```bash
+cd packages/Frooxi/Admin && npm run dev
+cd packages/Frooxi/Shop && npm run dev
+```
+
+Use the Installer Vite build only when working on the installer UI.
+
+## Installer command
+
+The installer command is:
+
+```bash
 php artisan nextoutfit:install
 ```
 
-The interactive installer (`packages/Frooxi/Installer/src/Console/Commands/Installer.php`) will:
-1. Ask for app name/URL/timezone/locale/currency (pass `--skip-env-check` to skip and use `.env` as-is).
-2. Ask for DB credentials and test the connection.
-3. Generate `APP_KEY`.
-4. **Run `db:wipe` then `migrate:fresh`** — this is destructive, don't run it against a database with data you want to keep.
-5. Seed core reference data (locales, currencies, default attribute family, customer groups, etc.).
-6. `storage:link`.
-7. Prompt for an admin account (name/email/password ≥6 chars) unless `--skip-admin-creation`; optionally seeds sample products and rebuilds the index.
-8. `optimize:clear`.
+Use it for a fresh install only. The command calls `db:wipe` and `migrate:fresh`, then seeds base data and creates or updates admin credentials.
 
-After install, build frontend assets for the package(s) you're working on:
+Useful options:
 
-```bash
-cd packages/Frooxi/Admin && npm install && npm run dev    # or npm run build
-cd packages/Frooxi/Shop  && npm install && npm run dev    # or npm run build
-```
+| Option | Purpose |
+| --- | --- |
+| `--skip-env-check` | Use the existing `.env` without prompting |
+| `--skip-admin-creation` | Skip interactive admin creation |
+| `--skip-github-star` | Skip the prompt at the end |
 
-Then `php artisan serve` and visit `http://localhost:8000` (Shop) / `http://localhost:8000/admin` (Admin, or whatever `APP_ADMIN_URL` is set to).
+## Build assets
 
-## Key environment variables (`.env`)
-
-| Variable | Default in `.env.example` | Notes |
-|---|---|---|
-| `APP_ADMIN_URL` | `admin` | Admin panel path prefix |
-| `APP_TIMEZONE` | `Asia/Dhaka` | Confirms Bangladesh as the primary market |
-| `APP_CURRENCY` | `BDT` | Default store currency — Bangladeshi Taka (৳), matching the SSLCommerz/bKash gateways |
-| `FILESYSTEM_DISK` | `cloudinary` | Set to `public` for local disk storage instead |
-| `CLOUDINARY_*` | placeholders | Required if `FILESYSTEM_DISK=cloudinary` |
-| `SESSION_DRIVER` | `database` | Requires the `sessions` table (migration exists) |
-| `QUEUE_CONNECTION` | `sync` | **No queue worker needed today** since jobs run inline — if you later switch to `database`/`redis`, remember to run `php artisan queue:work` |
-| `CACHE_STORE` | `file` | Redis client (`predis/predis`) is installed but not the active cache store by default |
-| `MAIL_MAILER` | `frooxi-dynamic-smtp` | Custom mailer — per-channel SMTP settings pulled from DB config, not just `.env` |
-| `SSLCZ_STORE_ID` / `SSLCZ_STORE_PASSWORD` / `SSLCZ_TESTMODE` | not in `.env.example`, read by `config/sslcommerz.php` | **Admin-panel-configured values override these at runtime** via `getConfigData()` — don't assume `.env` alone controls SSLCommerz behavior |
-
-`config/sslwireless.php` also exists — confirm whether SSLWireless (a different Bangladeshi SMS/payment provider) is actually wired into the Payment package's method list or whether it's leftover/unused; it wasn't found referenced in `payment-methods.php` during this audit.
-
-## Database
-
-- Run `php artisan migrate` (without `--fresh`/`db:wipe`) for incremental updates after the initial install.
-- `php artisan db:seed` for seeders (Core/Attribute/Category/Customer/Inventory/Shop/User — check `database/seeders/` for the full list and whether sample-product seeding is separate).
-- After bulk product/price/inventory changes, run `php artisan indexer:index --mode=full` to rebuild `product_flat`/price/inventory index tables (the `elastic` index type will error — no Elasticsearch is configured, see [README.md](README.md)).
-
-## Translations
+Build Admin and Shop assets:
 
 ```bash
-php artisan nextoutfit:translations:check          # validate key parity
+cd packages/Frooxi/Admin && npm run build
+cd ../Shop && npm run build
 ```
 
-The product is **English-only** — only `lang/en` (and each package's `Resources/lang/en`) ships, and the installer's locale picker now offers English only. If you ever re-add locales, every translation key added anywhere needs a matching entry in each locale file, or the checker (and any UI relying on it) will flag gaps.
+The production Dockerfile builds Admin and Shop assets during the image build.
 
-## Code style
+## Routine commands
 
 ```bash
-vendor/bin/pint           # fix
-vendor/bin/pint --test    # check only
+php artisan optimize:clear
+php artisan optimize
+php artisan storage:link
+php artisan indexer:index --type=price --type=inventory --type=flat --mode=full
+php artisan nextoutfit:translations:check
 ```
 
-## Testing
+## Testing status
 
-Package-level Pest suites exist under `packages/Frooxi/*/tests/`, but the suite is **not runnable as-is**: there is no root `phpunit.xml` wiring the suites together, and several test files still reference removed packages (Tax/CartRule/CatalogRule/Marketing). So `vendor/bin/pest` will not run cleanly yet. Wiring up `phpunit.xml` and getting a checkout/payment/admin-login smoke suite green should be an early priority — see the "known follow-ups" in [README.md](README.md).
+Pest and Playwright test files exist under package test folders. This repository does not include a root `phpunit.xml` in the current workspace, and several tests still reference inactive features.
 
-## Deployment
+Before using tests as a release gate:
 
-Docker (dev + prod flavors) and a GitHub Actions auto-deploy pipeline now exist — see **[DEPLOYMENT.md](DEPLOYMENT.md)** for the full story (compose files, reverse-proxy guidance, VPS setup, CI secrets). Other operational notes:
-
-- `APP_DEBUG_ALLOWED_IPS` (read in `app/Providers/AppServiceProvider.php`) enables/disables **Laravel Debugbar** based on the requesting IP — it lets you turn on Debugbar for your own IP in an environment where `APP_DEBUG` is otherwise off. It's not a general security/access gate, just a Debugbar toggle.
-- `storage/installed` is written by the Installer (`storage_path('installed')`, dispatches a `frooxi.installed` event) as a marker that setup completed. If you're scripting deployments, make sure this file persists across deploys.
-- Cloudinary is the default file store — any deployment automation should not assume local disk uploads persist across deploys.
-- **Polymorphic types use the `Frooxi\*` class names.** Two historical migrations (`fix_webkul_morph_types_to_frooxi`, `fix_remaining_webkul_morph_types`) convert any legacy polymorphic type strings to their `Frooxi` equivalents on migrate. They only touch pre-existing data, so they are inert on a fresh install — no runtime morph-map shim is needed.
+1. Add a root `phpunit.xml`.
+2. Remove or update tests for inactive features.
+3. Add a small smoke suite for product listing, cart, checkout, Cash on Delivery, SSLCommerz callback handling, and bKash callback handling.

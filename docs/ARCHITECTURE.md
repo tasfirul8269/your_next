@@ -1,92 +1,182 @@
 # Architecture
 
-## High-level shape
+## Application shape
 
-This is a **modular monolith**. There is effectively one Laravel app (`app/` is almost empty — just a thin `Controller`, an `EncryptCookies` middleware override, and `AppServiceProvider`). All real functionality lives in 16 self-contained packages under `packages/Frooxi/`, each registered twice:
+The project is a Laravel 12 modular monolith. There is one Laravel application, one database, and multiple domain packages.
 
-1. **`bootstrap/providers.php`** — the package's main `XxxServiceProvider` (routes, views, translations, migrations, config publishing).
-2. **`config/concord.php`** — the package's `ModuleServiceProvider` (registers its Eloquent models with Concord).
+The root `app/` directory is intentionally thin. Most behavior lives in `packages/Frooxi/`, where each package owns its models, repositories, views, translations, migrations, routes, config, or service providers.
 
-Two storefronts share the same codebase and database:
-- **Admin** (`packages/Frooxi/Admin`) — back-office, served under `config('app.admin_url')` (default `/admin`).
-- **Shop** (`packages/Frooxi/Shop`) — customer storefront, served at `/`.
+The two main user surfaces are:
 
-Each has its own independent Vite build (`packages/Frooxi/Admin/package.json`, `packages/Frooxi/Shop/package.json`) producing separate JS/CSS bundles, plus a third independent build for `packages/Frooxi/Installer`.
+| Surface | Package | Default URL | Auth |
+| --- | --- | --- | --- |
+| Customer storefront | `packages/Frooxi/Shop` | `/` | Public pages plus the `customer` session guard |
+| Admin panel | `packages/Frooxi/Admin` | `/admin` | `admin` session guard |
 
-## The three-file pattern: Contract / Model / Proxy
+## Package registration
 
-Every domain entity (e.g. a Product, a Customer, an Order) is represented by **three classes**, not one:
+Packages are registered in two places:
 
-- **Contract** (`Contracts/ProductContract.php` or similar) — a PHP interface. Other packages type-hint against this, never against the concrete model.
-- **Model** (`Models/Product.php`) — the actual Eloquent model, implements the Contract.
-- **Proxy** (`Models/ProductProxy.php`) — a Concord-generated class that lets the *actual* model class used at runtime be swapped via config, without any other package's code changing. This is what makes it possible to override a core model from a custom package without editing core files.
+- `bootstrap/providers.php` registers each package service provider.
+- `config/concord.php` registers Concord module providers for model, proxy, and contract resolution.
 
-When you need to reference a model from another package, you reference the **Proxy**, not the concrete class directly. `Repository::model()` returns the **Contract**, not the Eloquent class.
+Composer also maps the package namespaces directly:
 
-## Repository pattern (Prettus L5)
-
-No controller queries Eloquent models directly. Every package has a `Repositories/` directory with classes extending `Frooxi\Core\Eloquent\Repository` (a thin wrapper around `prettus/l5-repository`). Controllers inject and call repositories; repositories call `model()` (resolved via the Proxy/Contract above) to get an Eloquent query.
-
-```
-Controller → Repository → Proxy → Contract → (concrete) Model → DB
-```
-
-## Path repositories for packages
-
-`composer.json` declares:
 ```json
-"repositories": [{"type": "path", "url": "packages/*/*", "options": {"symlink": true}}]
-```
-Packages are symlinked into the vendor autoloader rather than installed as real Composer packages. This means editing `packages/Frooxi/Product/src/...` takes effect immediately — no `composer update` needed. Only run `composer dump-autoload` when you add a *new* package or change PSR-4 mappings in the root `composer.json`.
-
-## Route registration per package
-
-Packages don't put everything in one `routes/web.php`. Each package's ServiceProvider loads multiple route files with different middleware stacks:
-
-- **Admin**: `auth-routes.php` (public, login/forgot-password) vs. everything else (`catalog-routes.php`, `sales-routes.php`, `customers-routes.php`, `settings-routes.php`, `storefront-routes.php`, `configuration-routes.php`, `rest-routes.php`, `web-protected.php`) which require the `admin` auth middleware, plus a separate `api.php` mounted at `api/v1/admin` under the `api` middleware group (no admin guard — see [API_REFERENCE.md](API_REFERENCE.md) and flag this in [HANDOVER_QA.md](HANDOVER_QA.md)).
-- **Shop**: `store-front-routes.php` (public catalog browsing, search, homepage), `customer-routes.php` (split public auth vs. `customer`-guarded account routes), `checkout-routes.php` (cart, one-page checkout, payment gateway callbacks), and `api.php` (AJAX endpoints under `/api`, mixed public/`customer`-guarded).
-
-Full endpoint-by-endpoint tables are in [API_REFERENCE.md](API_REFERENCE.md).
-
-## DataGrid abstraction
-
-Almost every admin listing page (products, orders, customers, etc.) is backed by a class in `packages/Frooxi/Admin/src/DataGrids/` extending the base `DataGrid` class defined in the `Frooxi\DataGrid` package. Subclasses implement:
-
-- `prepareQueryBuilder()` — the base Eloquent/query builder.
-- `prepareColumns()` — calls `addColumn()` per column, each with `searchable`/`filterable`/`sortable`/`exportable` flags and an optional `closure` for custom rendering.
-- `prepareActions()` / `prepareMassActions()` — per-row and bulk-row actions.
-
-This gives every listing page consistent search/filter/sort/export/saved-filter behavior for free. Export uses `maatwebsite/excel`. Filter presets persist to a `SavedFilter` model per user per grid.
-
-## Theming
-
-`config/themes.php` registers themes for Admin and Shop with `assets_path`, `views_path`, and Vite hot-file/build-dir config. The `Frooxi\Theme` package's `Theme`/`Themes` classes resolve the active theme (with optional parent-theme inheritance) and a `ThemeViewFinder` walks child → parent when resolving Blade view paths. `ThemeCustomization` (+ translation) models store theme-wide editable content (carousels, footer links) per locale.
-
-## Auth guards
-
-Two completely separate auth systems, defined in `config/auth.php`:
-
-| Guard | Driver | Provider model | Used by |
-|---|---|---|---|
-| `admin` | session | `Frooxi\User\Models\Admin` | Admin package |
-| `customer` | session | `Frooxi\Customer\Models\Customer` | Shop package |
-
-Both models have an `api_token` column (Sanctum-ready) but in practice **session-based auth is what's actually enforced** by the route middleware (`admin`, `customer` groups) — see [HANDOVER_QA.md](HANDOVER_QA.md) for why Sanctum doesn't seem to be load-bearing today.
-
-## Cart → Order lifecycle
-
-```
-Cart (Checkout pkg, session or DB-backed)
-  → CartItem, CartAddress, CartPayment, CartShippingRate
-  → [One-page checkout: address → shipping method → payment method → place order]
-  → Order (Sales pkg) created from Cart, OrderItem/OrderAddress/OrderPayment copied over
-  → Invoice generated (auto for COD/MoneyTransfer per config, or after gateway confirms payment)
-  → Shipment created against an InventorySource when fulfilled
-  → Refund created against an Invoice if needed
+"Frooxi\\Product\\": "packages/Frooxi/Product/src"
 ```
 
-Tax package has been removed from this fork, but tax-shaped columns (`tax_amount`, `price_incl_tax`, etc.) remain on `cart_items`, `order_items`, and shipping rate tables for backward compatibility / possible future re-introduction.
+The root `composer.json` uses a path repository:
 
-## Product types
+```json
+{
+  "type": "path",
+  "url": "packages/*/*",
+  "options": {
+    "symlink": true
+  }
+}
+```
 
-`Frooxi\Product\Type\AbstractType` is subclassed per product type (`Simple`, `Configurable`, and others referenced by `config('product_types')`) to encapsulate type-specific behavior: variant handling, price calculation, cart validation, and invoicing logic. Attribute data is stored EAV-style in `product_attribute_values` (see [PACKAGES.md](PACKAGES.md#attribute)); a denormalized `product_flat` table plus `product_price_indices`/`product_inventory_indices` are kept in sync by the `indexer:index` console command for fast storefront queries.
+That means package code is edited directly in this repository. Run `composer dump-autoload` after adding new classes or changing namespace mappings.
+
+## Model pattern
+
+Domain entities usually use a three-part pattern:
+
+| Part | Purpose |
+| --- | --- |
+| Contract | Interface used for type hints across packages |
+| Model | Concrete Eloquent model |
+| Proxy | Concord proxy used when another package needs the model |
+
+Example:
+
+```text
+Frooxi\Product\Contracts\Product
+Frooxi\Product\Models\Product
+Frooxi\Product\Models\ProductProxy
+```
+
+Controllers usually work through repositories rather than querying Eloquent directly.
+
+```text
+Controller -> Repository -> Proxy or Model -> Database
+```
+
+## Route loading
+
+Package service providers load routes instead of putting everything in the root `routes/web.php`.
+
+Shop routes:
+
+- `packages/Frooxi/Shop/src/Routes/store-front-routes.php`
+- `packages/Frooxi/Shop/src/Routes/customer-routes.php`
+- `packages/Frooxi/Shop/src/Routes/checkout-routes.php`
+- `packages/Frooxi/Shop/src/Routes/api.php`
+- `packages/Frooxi/Shop/src/Routes/web.php`
+
+Admin routes:
+
+- `packages/Frooxi/Admin/src/Routes/auth-routes.php`
+- `packages/Frooxi/Admin/src/Routes/web-protected.php`
+- `packages/Frooxi/Admin/src/Routes/catalog-routes.php`
+- `packages/Frooxi/Admin/src/Routes/sales-routes.php`
+- `packages/Frooxi/Admin/src/Routes/customers-routes.php`
+- `packages/Frooxi/Admin/src/Routes/settings-routes.php`
+- `packages/Frooxi/Admin/src/Routes/storefront-routes.php`
+- `packages/Frooxi/Admin/src/Routes/configuration-routes.php`
+- `packages/Frooxi/Admin/src/Routes/rest-routes.php`
+- `packages/Frooxi/Admin/src/Routes/api.php`
+
+The shop API routes are mounted under `/api` with web middleware. The admin API routes are mounted under `/api/v1/admin` with API middleware.
+
+## Auth model
+
+The app uses session authentication.
+
+| Guard | Provider | Model |
+| --- | --- | --- |
+| `customer` | `customers` | `Frooxi\Customer\Models\Customer` |
+| `admin` | `admins` | `Frooxi\User\Models\Admin` |
+
+Customer registration uses OTP fields on the `customers` table. Admin users can use two-factor authentication through fields on the `admins` table.
+
+Sanctum is installed, and user models have token-related support, but the current routes rely on session guards.
+
+## Storefront request flow
+
+Typical storefront browsing flow:
+
+```text
+Browser -> Shop route -> Shop controller -> Product or Category repository -> Blade view -> Shop Vite assets
+```
+
+Product listing pages use AJAX for filtering, sorting, price range, category tree, wishlist state, and cart actions.
+
+## Checkout flow
+
+The checkout flow uses the Checkout, Shipping, Payment, Sales, Product, Customer, and Inventory packages.
+
+```text
+Cart
+-> cart items
+-> billing and shipping addresses
+-> custom shipping method
+-> payment method
+-> order
+-> optional gateway redirect
+-> gateway callback or Cash on Delivery completion
+-> invoice and order status updates
+```
+
+The active payment methods are:
+
+| Code | Flow |
+| --- | --- |
+| `cashondelivery` | No redirect |
+| `sslcommerz` | Redirect to SSLCommerz and receive POST callbacks |
+| `bkash` | Redirect to bKash and receive GET callback |
+
+The active shipping carrier is `customshipping`. The admin panel manages rows in the `shipping_methods` table, and checkout exposes active rows as selectable rates.
+
+## Product catalog
+
+The active product types are defined in `packages/Frooxi/Product/src/Config/product_types.php`:
+
+| Type | Class |
+| --- | --- |
+| `simple` | `Frooxi\Product\Type\Simple` |
+| `configurable` | `Frooxi\Product\Type\Configurable` |
+
+Product attribute data uses an EAV structure through the Attribute and Product packages. Storefront reads are optimized through `product_flat`, `product_price_indices`, and `product_inventory_indices`.
+
+Use the indexer after imports or bulk product changes:
+
+```bash
+php artisan indexer:index --type=price --type=inventory --type=flat --mode=full
+```
+
+## Frontend builds
+
+The root `package.json` exists, but the active package builds are separate.
+
+| Area | Path | Notes |
+| --- | --- | --- |
+| Admin | `packages/Frooxi/Admin` | Vue 3, Alpine.js, Tailwind CSS, Chart.js, Vite |
+| Shop | `packages/Frooxi/Shop` | Vue 3, Tailwind CSS, Vite |
+| Installer | `packages/Frooxi/Installer` | Vue 3, Tailwind CSS, Vite |
+
+The Docker development stack runs Admin and Shop Vite servers separately.
+
+## Storage and media
+
+`config/filesystems.php` defines `public`, `local`, `private`, `s3`, and `cloudinary` disks. The active disk comes from `FILESYSTEM_DISK`.
+
+Product images, hero slides, theme assets, and uploaded files should be checked against the configured disk before migration or deployment.
+
+## Data grids
+
+Admin listing pages use the DataGrid package for search, filtering, sorting, pagination, export, mass actions, and saved filters.
+
+Saved filters are stored in the `saved_filters` table and scoped to the grid and admin user.

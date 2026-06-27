@@ -1,224 +1,246 @@
-# Shop API & Web Endpoint Reference
+# Shop API details
 
-Detailed, code-grounded reference for the customer-facing storefront (`packages/Frooxi/Shop`). Every route, its auth requirement, request parameters with validation rules, and response shape is taken directly from the controllers, Form Requests, and API Resource classes.
+The shop API is loaded by `Frooxi\Shop\Providers\ShopServiceProvider` with `web`, `shop`, and maintenance middleware. These endpoints are used by Blade and Vue components in `packages/Frooxi/Shop/src/Resources/views`.
 
-## Conventions
+## Catalog and filters
 
-- **Base middleware**: all Shop routes run under `web`, `shop`, `PreventRequestsDuringMaintenance`. The `shop` middleware group applies `Theme`, `Locale`, and `Currency` middleware.
-- **Auth**: endpoints marked **Authenticated** require the `customer` session guard. Everything else is **Public**.
-- **AJAX JSON**: the `/api/*` routes return JSON (mostly Laravel `JsonResource` envelopes). The non-`/api` customer routes are server-rendered Blade pages or redirects.
-- **Money fields**: every monetary value comes in both a raw form (`grand_total`) and a localized form (`formatted_grand_total`). Tax fields exist but are always zero (the Tax package was removed).
+### `GET /api/products`
 
----
+Used by search results, category pages, category tabs, flash sale sections, and product carousels.
 
-## 1. Cart API — `CartController` (`/api/checkout/cart`)
+Common query parameters come from the storefront UI:
 
-All cart endpoints are **Public** (a guest cart lives in the session; a logged-in cart is keyed by `customer_id`).
+| Parameter | Used for |
+| --- | --- |
+| `category_id` | Filter products by category |
+| `sort` | Sorting |
+| `limit` or `per_page` | Page size |
+| `page` | Pagination |
+| Attribute codes | Faceted filters |
+| `price` or price bounds | Price filtering |
+| `featured`, `new`, or flash-sale-related flags | Product sections |
 
-### GET `/api/checkout/cart` — `shop.api.checkout.cart.index`
-Returns the active cart. Validation: none.
-```php
-return new JsonResource(['data' => $cart ? new CartResource($cart) : null]);
-```
-**`CartResource` fields**: `id`, `is_guest`, `customer_id`, `items_count`, `items_qty`, `applied_taxes`, `tax_total`, `formatted_tax_total`, `sub_total`, `sub_total_incl_tax`, `formatted_sub_total`, `formatted_sub_total_incl_tax`, `coupon_code`, `discount_amount`, `formatted_discount_amount`, `shipping_method`, `shipping_amount`, `formatted_shipping_amount`, `grand_total`, `formatted_grand_total`, `items[]` (`CartItemResource`), `billing_address`, `shipping_address`, `have_stockable_items`, `payment_method`, `payment_method_title`.
+Returns a product collection shaped for storefront cards.
 
-### POST `/api/checkout/cart` — `shop.api.checkout.cart.store`
-Add a product to the cart.
-```php
-'product_id' => 'required|integer|exists:products,id',
-'is_buy_now' => 'integer|in:0,1',
-'quantity'   => 'integer|min:1',
-```
-Request: `{ "product_id": 123, "quantity": 2, "is_buy_now": 0 }`. Additional configurable/option fields are passed through to `Cart::addProduct()`.
-Success → `{ data: CartResource, message }` (plus `redirect` to onepage when `is_buy_now=1`).
-Errors → `400` with `message` (insufficient inventory) or `400` with `redirect_uri` + `message`.
+### `GET /api/categories/tree`
 
-### PUT `/api/checkout/cart` — `shop.api.checkout.cart.update`
-Update quantities. No validation. Request: `{ "items": [ {"id":1,"quantity":3}, ... ] }`. Returns updated `CartResource`.
+Used by the desktop header, mobile header, category pages, and category tabs.
 
-### DELETE `/api/checkout/cart` — `shop.api.checkout.cart.destroy`
-`'cart_item_id' => 'required|exists:cart_items,id'`. Returns updated `CartResource` + success message.
+Returns the category hierarchy for navigation and category filter UI.
 
-### DELETE `/api/checkout/cart/selected` — `shop.api.checkout.cart.destroy_selected`
-Body `{ "ids": [1,2,3] }`. No validation. Returns updated cart.
+### `GET /api/categories/attributes`
 
-### POST `/api/checkout/cart/move-to-wishlist` — `shop.api.checkout.cart.move_to_wishlist`
-Body `{ "ids": [...], "qty": [...] }`. Returns updated cart.
+Used by category and search filter panels.
 
-### POST `/api/checkout/cart/estimate-shipping-methods` — `shop.api.checkout.cart.estimate_shipping`
-Returns available shipping rates for the cart (used before login/checkout).
+Returns filterable attributes for the current listing context.
 
-### POST `/api/checkout/cart/coupon` — `shop.api.checkout.cart.coupon.apply` — ⚠️ DISABLED
-The coupon/promotion engine (CartRule package) was removed. The route still exists but applying a coupon is a no-op / not functional. Documented here so nobody assumes coupons work.
+### `GET /api/categories/attributes/{attribute_id}/options`
 
-### DELETE `/api/checkout/cart/coupon` — `shop.api.checkout.cart.coupon.remove`
-Removes any stored `coupon_code` from the cart.
+Used when the storefront needs the options for a selected filter, such as color or size.
 
-### GET `/api/checkout/cart/cross-sell` — `shop.api.checkout.cart.cross-sell.index`
-Returns cross-sell product suggestions for the current cart.
+Supports pagination through query parameters used by the UI, such as `per_page`.
 
----
+### `GET /api/categories/price-range/{id?}`
 
-## 2. Checkout API — `OnepageController` (`/api/checkout/onepage`)
+Used by search, category pages, and category tabs.
 
-Public (the checkout flow works for guests). The flow is sequential: summary → addresses → shipping-methods → payment-methods → orders.
+Returns the min and max price range for the current product set.
 
-### GET `/api/checkout/onepage/summary` — `shop.checkout.onepage.summary`
-Returns `new CartResource($cart)` (full cart snapshot for the checkout page).
+### `GET /api/products/{id}/related`
 
-### POST `/api/checkout/onepage/addresses` — `shop.checkout.onepage.addresses.store`
-Validated by `CartAddressRequest`. It conditionally validates a `billing` block and, unless `billing.use_for_shipping` is set, a `shipping` block. Each address block requires: `first_name`, `last_name`, `email`, `address` (array, min 1), `city`, `state`, `country`, `postcode`, `phone` (validated by the `PhoneNumber` rule).
-- Success (shipping needed) → `{ redirect: false, data: <shipping rates> }`
-- Success (digital-only cart) → `{ redirect: false, data: <payment methods> }`
-- Error → `{ redirect: true, redirect_url: <cart page> }`
+Used on the product detail page for related products.
 
-### POST `/api/checkout/onepage/shipping-methods` — `shop.checkout.onepage.shipping_methods.store`
-`'shipping_method' => 'required'`. The value is a method code — with the current carrier set that means `customshipping_<id>` (the `flatrate`/`free` carriers were removed). Success → `response()->json(Payment::getSupportedPaymentMethods())`. Error → `403` with `redirect_url`.
+### `GET /api/products/{id}/up-sell`
 
-### POST `/api/checkout/onepage/payment-methods` — `shop.checkout.onepage.payment_methods.store`
-`'payment' => 'required'`. Success → `{ cart: CartResource }`. Error → `403` with `redirect_url`.
+Used on the product detail page for up-sell products.
 
-### POST `/api/checkout/onepage/orders` — `shop.checkout.onepage.orders.store`
-Places the order. No request body — relies on cart state from prior steps. Internally runs `validateOrder()` (checks: customer not suspended & active, minimum order amount, billing address present, shipping address present when stockable, shipping method selected, payment method selected).
-- If the payment method needs an off-site redirect (SSLCommerz/bKash) → `{ redirect: true, redirect_url: <gateway url> }`
-- On success → `{ redirect: true, redirect_url: route('shop.checkout.onepage.success') }`
-- On coupon usage-limit failure → `{ redirect: false, message }` (catches `Frooxi\Checkout\Exceptions\CouponUsageLimitExceededException`)
-- On validation failure → `500` with `message`
+## Product reviews
 
----
+### `GET /api/product/{id}/reviews`
 
-## 3. Customer Account API (Authenticated unless noted)
+Used by the product detail review section.
 
-### POST `/api/customer/login` — `shop.api.customers.session.create` — Public
-Validated by `LoginRequest`: `phone` (required, regex `^(\+?880|0)?1[3-9][0-9]{8}$`), `password` (required, min 6), wrapped in captcha validation. Note: **login is by phone number, not email.**
-- Invalid credentials → `403` `{ message }`
-- Account inactive → `403`
-- Not verified → `403` (and queues resend cookies)
-- Success → `200` empty body, fires `customer.after.login`
+Returns paginated reviews for the product.
 
-### Addresses — `AddressController` (Authenticated)
-- GET `/api/customer/addresses` — `shop.api.customers.account.addresses.index`
-- POST `/api/customer/addresses` — `shop.api.customers.account.addresses.store`
-- PUT `/api/customer/addresses/edit/{id?}` — `shop.api.customers.account.addresses.update`
+### `POST /api/product/{id}/review`
 
-Validated by `AddressRequest` (fields: `company_name`, `first_name`, `last_name`, `address` array, `country`, `state`, `city`, `postcode`, `phone`, `email`).
+Used by the product detail review form.
 
-### Wishlist — `WishlistController` (Authenticated)
-- GET `/api/customer/wishlist` — list items
-- POST `/api/customer/wishlist` — add (`product_id`)
-- POST `/api/customer/wishlist/{id}/move-to-cart` — move item to cart
-- DELETE `/api/customer/wishlist/{id}` — remove one
-- DELETE `/api/customer/wishlist/all` — clear all
+The route is public, but review creation depends on controller validation and customer state.
 
----
+### `GET /api/product/{id}/reviews/{review_id}/translate`
 
-## 4. Catalog API (Public)
+Used by the review section's translate action.
 
-### Products — `ProductController`
-- GET `/api/products` — `shop.api.products.index`. Query params: category filters, `?sort=`, `?limit=`, `?page=`, attribute filters. Returns a paginated product collection (storefront `product_flat` data).
-- GET `/api/products/{id}/related` — related products.
-- GET `/api/products/{id}/up-sell` — up-sell products.
+## Cart
 
-### Categories — `CategoryController`
-- GET `/api/categories` — flat list.
-- GET `/api/categories/tree` — nested tree.
-- GET `/api/categories/attributes` — filterable attributes for faceted search.
-- GET `/api/categories/attributes/{attribute_id}/options` — options for one attribute.
-- GET `/api/categories/price-range/{id?}` — min/max product price for the price-filter slider.
+### `GET /api/checkout/cart`
 
-### Reviews — `ReviewController`
-- GET `/api/product/{id}/reviews` — list reviews.
-- POST `/api/product/{id}/review` — submit a review (validates `title`, `rating` 1–5, `comment`, optional image attachments).
-- GET `/api/product/{id}/reviews/{review_id}/translate` — translate a review.
+Used by the mini cart and cart page to refresh cart state.
 
-### Core lookup — `CoreController`
-- GET `/api/core/countries` — country list.
-- GET `/api/core/states` — state list (filtered by `?country_code=`).
+### `POST /api/checkout/cart`
 
-### Hero slides — `HeroSlideController`
-- GET `/api/hero-slides` — `shop.api.hero_slides.index` — active homepage carousel slides.
+Used by product cards, product detail pages, category pages, search pages, and flash sale sections.
 
----
+Common payload:
 
-## 5. Storefront Web Pages (server-rendered Blade)
+| Field | Purpose |
+| --- | --- |
+| `product_id` | Product to add |
+| `quantity` | Quantity |
+| `selected_configurable_option` | Selected variant for configurable products |
+| Product option fields | Values required by the selected product type |
 
-`store-front-routes.php` — Public unless noted.
+### `PUT /api/checkout/cart`
 
-| Method | Path | Name | Renders |
-|---|---|---|---|
-| GET | `/` | `shop.home.index` | Homepage |
-| GET | `/contact-us` | `shop.home.contact_us` | Contact form |
-| POST | `/contact-us/send-mail` | `shop.home.contact_us.send_mail` | Sends contact email |
-| GET | `/all-categories` | `shop.all-categories.index` | Category index |
-| GET | `/flash-sale` | `shop.flash-sale.index` | Flash sale page |
-| GET | `/search` | `shop.search.index` | Search results |
-| POST | `/search/upload` | `shop.search.upload` | Image-search upload |
-| GET | `/api/search` | `shop.search.suggestions` | Autocomplete JSON |
-| POST | `/subscription` | `shop.subscription.store` | Newsletter subscribe |
-| GET | `/subscription/{token}` | `shop.subscription.destroy` | Unsubscribe |
-| GET | `/product/{id}/{attribute_id}` | `shop.product.file.download` | Downloadable-product file |
-| GET | `*` (fallback) | `shop.product_or_category.index` | Product or category page (slug router) |
+Used to update quantities.
 
----
+Common payload:
 
-## 6. Customer Auth & Account Web Pages
+| Field | Purpose |
+| --- | --- |
+| `qty` | Item quantity map or quantity value, depending on caller |
 
-`customer-routes.php`, prefix `customer`.
+### `DELETE /api/checkout/cart`
 
-### Registration — `RegistrationController` (Public)
-- GET `/customer/register` → Blade `shop::customers.sign-up`.
-- POST `/customer/register` → validated by `RegistrationRequest`:
-  ```php
-  'first_name' => 'string|required',
-  'last_name'  => 'string|required',
-  'phone'      => ['required','string','regex:/^(\+?880|0)?1[3-9][0-9]{8}$/','unique:customers,phone'],
-  'password'   => 'confirmed|min:6|required',
-  ```
-  (wrapped in captcha). On success: generates an OTP via `OtpService::generateOtp($phone)`, sends it via SMS (SSLWireless SMS service), stores a pending registration in the session, and redirects to `shop.customers.verify-otp`.
-- GET `/customer/verify-otp` → OTP entry form (shows masked phone).
-- POST `/customer/verify-otp` → verifies the code, creates the customer, logs them in.
-- POST `/customer/resend-otp` → regenerates and resends the OTP.
+Used to remove a cart item.
 
-> **OTP delivery** is wired through `Frooxi\Customer\Services\SslWirelessSmsService` (an HTTP call to the SSLWireless SMS gateway, configured in `config/sslwireless.php`). In `mock` mode (the default) the OTP is logged instead of sent — set the SSLWireless env credentials and disable mock mode for real SMS.
+### `DELETE /api/checkout/cart/selected`
 
-### Login / Logout — `SessionController` (Public / Authenticated)
-- GET `/customer/login` — login form.
-- POST `/customer/login` — process login (phone + password).
-- DELETE `/customer/logout` — (Authenticated) log out.
+Used to remove selected cart items from the cart page.
 
-### Password reset — Public
-- GET/POST `/customer/forgot-password` — `ForgotPasswordController` (request a reset link).
-- GET `/customer/reset-password/{token}` + POST `/customer/reset-password` — `ResetPasswordController`.
+### `POST /api/checkout/cart/move-to-wishlist`
 
-### Account area — Authenticated (`customer` guard + `NoCacheMiddleware`)
-- `/customer/account` — dashboard.
-- `/customer/account/profile` (+ `/edit`, `/destroy`) — view/edit/delete profile.
-- `/customer/account/addresses` (+ `/create`, `/edit/{id}`, `/delete/{id}`) — address book CRUD, PATCH sets default.
-- `/customer/account/orders` (+ `/view/{id}`, `/reorder/{id}`, `/cancel/{id}`, `/print/Invoice/{id}`) — order history.
-- `/customer/account/wishlist` — wishlist page.
-- `/customer/account/reviews` — the customer's reviews.
+Used to move a cart item into the wishlist.
 
----
+Requires a customer session for the wishlist write to succeed.
 
-## 7. Payment Gateway Callbacks — `checkout-routes.php`
+### `POST /api/checkout/cart/coupon`
 
-These are the off-site redirect/return targets for the two hosted gateways. See [PACKAGES.md](../PACKAGES.md#payment) for the gateway internals.
+Used by the checkout coupon component.
 
-### bKash — `BkashController` (GET-based)
-| Method | Path | Name | Role |
-|---|---|---|---|
-| GET | `/checkout/bkash/pay` | `shop.bkash.pay` | Creates the bKash payment, redirects to the bKash portal |
-| GET | `/checkout/bkash/callback` | `shop.bkash.callback` | Return URL; verifies & executes the payment, then places the order |
-| GET | `/checkout/bkash/cancel` | `shop.bkash.cancel` | User cancelled |
-| GET | `/checkout/bkash/failure` | `shop.bkash.failure` | Payment failed |
+Payload:
 
-### SSLCommerz — `SSLCommerzController` (POST webhooks, CSRF-exempt)
-| Method | Path | Name | Role |
-|---|---|---|---|
-| GET | `/checkout/sslcommerz/pay` | `shop.sslcommerz.pay` | Builds the payment request, redirects to the SSLCommerz hosted page |
-| POST | `/checkout/sslcommerz/success` | `shop.sslcommerz.success` | Success return; validates the transaction, places the order |
-| POST | `/checkout/sslcommerz/fail` | `shop.sslcommerz.fail` | Failure return |
-| POST | `/checkout/sslcommerz/cancel` | `shop.sslcommerz.cancel` | Cancellation return |
-| POST | `/checkout/sslcommerz/ipn` | `shop.sslcommerz.ipn` | Server-to-server IPN (Instant Payment Notification) validation |
+| Field | Purpose |
+| --- | --- |
+| `code` | Coupon code |
 
-> The four SSLCommerz POST routes must remain **CSRF-exempt** (they're called by SSLCommerz's servers / cross-site redirects). If you ever edit `VerifyCsrfToken`, keep `checkout/sslcommerz/*` in the exclusion list. Live store credentials configured in the admin panel override the `config/sslcommerz.php` / `.env` fallback values at runtime.
+### `DELETE /api/checkout/cart/coupon`
+
+Removes the applied coupon.
+
+### `GET /api/checkout/cart/cross-sell`
+
+Used by the cart page for cross-sell products.
+
+## One-page checkout
+
+### `GET /api/checkout/onepage/summary`
+
+Used by the checkout page to refresh totals and selected checkout state.
+
+### `POST /api/checkout/onepage/addresses`
+
+Stores billing and shipping addresses for the active cart.
+
+Used by guest checkout and logged-in checkout address forms.
+
+### `POST /api/checkout/onepage/shipping-methods`
+
+Stores the selected shipping method.
+
+With the current shipping config, valid method values come from active rows in `shipping_methods` and use the `customshipping` carrier.
+
+### `POST /api/checkout/onepage/payment-methods`
+
+Stores the selected payment method.
+
+Active payment method codes:
+
+| Code | Flow |
+| --- | --- |
+| `cashondelivery` | Complete without redirect |
+| `sslcommerz` | Redirect after order placement |
+| `bkash` | Redirect after order placement |
+
+### `POST /api/checkout/onepage/orders`
+
+Creates the order from the active cart.
+
+The response can include a redirect URL for gateway payment methods.
+
+## Customer API
+
+### `POST /api/customer/login`
+
+Used by checkout login.
+
+### `GET /api/customer/addresses`
+
+Requires the `customer` middleware.
+
+Used by checkout to load saved customer addresses.
+
+### `POST /api/customer/addresses`
+
+Requires the `customer` middleware.
+
+Creates a saved customer address during checkout.
+
+### `PUT /api/customer/addresses/edit/{id?}`
+
+Requires the `customer` middleware.
+
+Updates a saved customer address during checkout.
+
+### `GET /api/customer/wishlist`
+
+Requires the `customer` middleware.
+
+Used by wishlist screens and product cards to read wishlist state.
+
+### `POST /api/customer/wishlist`
+
+Requires the `customer` middleware.
+
+Adds a product to the wishlist.
+
+### `POST /api/customer/wishlist/{id}/move-to-cart`
+
+Requires the `customer` middleware.
+
+Moves a wishlist item into the cart.
+
+### `DELETE /api/customer/wishlist/all`
+
+Requires the `customer` middleware.
+
+Clears the wishlist.
+
+### `DELETE /api/customer/wishlist/{id}`
+
+Requires the `customer` middleware.
+
+Deletes one wishlist item.
+
+## Payment callback routes
+
+These are web routes, not `/api` routes, but they are part of the checkout integration.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/checkout/bkash/pay` | Start bKash payment |
+| `GET` | `/checkout/bkash/callback` | bKash payment callback |
+| `GET` | `/checkout/bkash/cancel` | bKash cancel redirect |
+| `GET` | `/checkout/bkash/failure` | bKash failure redirect |
+| `GET` | `/checkout/sslcommerz/pay` | Start SSLCommerz payment |
+| `POST` | `/checkout/sslcommerz/success` | SSLCommerz success callback |
+| `POST` | `/checkout/sslcommerz/fail` | SSLCommerz failure callback |
+| `POST` | `/checkout/sslcommerz/cancel` | SSLCommerz cancel callback |
+| `POST` | `/checkout/sslcommerz/ipn` | SSLCommerz IPN |
+
+SSLCommerz callback paths are excluded from CSRF validation in `bootstrap/app.php`.
+
+## Missing route used by storefront code
+
+`packages/Frooxi/Shop/src/Resources/views/components/products/card.blade.php` posts logged-in compare actions to `/api/compare`. No matching route exists in the current shop route files. Guest compare uses `localStorage`, so this only affects logged-in compare behavior.
