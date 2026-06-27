@@ -49,3 +49,9 @@ skills-lock.json
 yarn.lock
 yarn-error.log
 /bootstrap/cache/*.php
+
+# Local-only secrets reference (never commit)
+CREDENTIALS.md
+
+# AI-assistant guidance — keep local, do not publish
+CLAUDE.md

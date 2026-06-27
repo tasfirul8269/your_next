@@ -8,7 +8,7 @@
 - MySQL (the installer's DB wizard only supports `mysql` as a connection type)
 - A Cloudinary account (default file storage — see below) **or** reconfigure `FILESYSTEM_DISK` to `public`/`local` if you don't want to use Cloudinary
 
-> There is no `docker-compose.yml`/Sail config in this repo despite CLAUDE.md referencing one — you're setting up PHP/MySQL/Node yourself or writing your own Docker setup.
+> **Recommended:** use the Docker stacks (dev + prod) instead of a manual setup — see **[DEPLOYMENT.md](DEPLOYMENT.md)** and the project **[README](../README.md)**. The steps below cover the manual (non-Docker) path if you need it.
 
 ## First-time install
 
@@ -43,7 +43,7 @@ Then `php artisan serve` and visit `http://localhost:8000` (Shop) / `http://loca
 |---|---|---|
 | `APP_ADMIN_URL` | `admin` | Admin panel path prefix |
 | `APP_TIMEZONE` | `Asia/Dhaka` | Confirms Bangladesh as the primary market |
-| `APP_CURRENCY` | `USD` | Default store currency — but gateways (SSLCommerz, bKash) are BDT-oriented; verify currency/gateway compatibility before going live |
+| `APP_CURRENCY` | `BDT` | Default store currency — Bangladeshi Taka (৳), matching the SSLCommerz/bKash gateways |
 | `FILESYSTEM_DISK` | `cloudinary` | Set to `public` for local disk storage instead |
 | `CLOUDINARY_*` | placeholders | Required if `FILESYSTEM_DISK=cloudinary` |
 | `SESSION_DRIVER` | `database` | Requires the `sessions` table (migration exists) |

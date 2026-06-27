@@ -5,7 +5,7 @@ This project ships two Docker "flavors" and a GitHub Actions pipeline that auto-
 - **Development flavor** — `docker-compose.dev.yml` + `docker/dev/Dockerfile`. Source is bind-mounted; Vite runs with hot-reload; mail is caught locally.
 - **Production flavor** — `docker-compose.prod.yml` + `docker/prod/Dockerfile`. A lean, multi-stage image with code + production deps + pre-built assets baked in, served by Nginx. Reverse-proxy friendly (no hardcoded 80/443).
 
-> Heads-up: this environment had no PHP/Docker available when these files were written, so they were **authored and statically reviewed but not built/run here**. Do a real `docker compose ... up --build` on a machine with Docker before trusting a first production deploy.
+> Both stacks have been **built and deployed on the production VPS** — dev on port `8000` and prod on port `8600` (behind the host's nginx reverse proxy). The commands below reflect that working setup.
 
 ---
 
@@ -39,11 +39,14 @@ Xdebug is installed but off; flip `xdebug.mode = debug` in `docker/dev/php.ini` 
 
 ## Production (manual)
 
+This is the method currently used for this project (the GitHub Actions pipeline below is optional).
+
 ```bash
 # On the server, with a real production .env present (see below):
-APP_PORT=8080 docker compose -f docker-compose.prod.yml up -d --build
+APP_PORT=8600 docker compose -f docker-compose.prod.yml up -d --build
 docker compose -f docker-compose.prod.yml exec -T app php artisan migrate --force
-docker compose -f docker-compose.prod.yml exec -T app php artisan optimize
+docker compose -f docker-compose.prod.yml exec -T app php artisan db:seed --class="Frooxi\Installer\Database\Seeders\DatabaseSeeder" --force
+docker compose -f docker-compose.prod.yml exec -T app php artisan db:seed --class="Database\Seeders\SizeOptionsSeeder" --force
 ```
 
 ### Ports & reverse proxy
