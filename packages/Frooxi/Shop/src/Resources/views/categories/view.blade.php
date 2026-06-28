@@ -266,21 +266,6 @@
                 </div>
             </div>
 
-            <div style="padding-bottom:8px;">
-                <div
-                    onclick="pcToggleSection('pc-color-body','pc-color-arrow')"
-                    style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:20px 28px;"
-                >
-                    <span style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;color:#111;letter-spacing:1.2px;text-transform:uppercase;">Color</span>
-                    <svg id="pc-color-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .25s;">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                    </svg>
-                </div>
-
-                <div id="pc-color-body" style="padding:4px 28px 20px;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;">
-                    {{-- Populated dynamically by JS fetchColorOptions() --}}
-                </div>
-            </div>
         </div>
 
         <div style="padding:16px 28px;border-top:1px solid #f3f4f6;">

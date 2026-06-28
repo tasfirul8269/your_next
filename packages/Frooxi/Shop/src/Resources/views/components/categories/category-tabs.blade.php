@@ -212,46 +212,6 @@
             </div>
         </div>
 
-        {{-- COLOR --}}
-        <div style="border-bottom:1px solid #f5f5f5;">
-            <div onclick="pcToggleSection('pc-color-body','pc-color-arrow')"
-                style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:20px 28px;">
-                <span style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;color:#111;letter-spacing:1.2px;text-transform:uppercase;">Color</span>
-                <svg id="pc-color-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .25s;">
-                    <polyline points="6 9 12 15 18 9"/>
-                </svg>
-            </div>
-            <div id="pc-color-body" style="padding:4px 28px 20px;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;">
-                {{-- Populated dynamically by JS fetchColorOptions() --}}
-            </div>
-        </div>
-
-        {{-- SLEEVE --}}
-        <div style="padding-bottom:8px;">
-            <div onclick="pcToggleSection('pc-sleeve-body','pc-sleeve-arrow')"
-                style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:20px 28px;">
-                <span style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;color:#111;letter-spacing:1.2px;text-transform:uppercase;">Sleeve</span>
-                <svg id="pc-sleeve-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .25s;">
-                    <polyline points="6 9 12 15 18 9"/>
-                </svg>
-            </div>
-            <div id="pc-sleeve-body" style="padding:4px 28px 20px;display:flex;flex-direction:column;gap:2px;">
-                @php
-                    $sleeveAttribute = app(\Frooxi\Attribute\Repositories\AttributeRepository::class)
-                        ->findOneByField('code', 'sleeve');
-                    $sleeveOptions = $sleeveAttribute ? $sleeveAttribute->options()->orderBy('sort_order')->get() : collect();
-                @endphp
-                @foreach ($sleeveOptions as $option)
-                    <div id="pc-sleeve-row-{{ $option->id }}" onclick="pcToggleSleeve(this,'{{ $option->id }}')"
-                        style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;cursor:pointer;border:1.5px solid transparent;">
-                        <div id="pc-cb-sleeve-{{ $option->id }}"
-                            style="width:16px;height:16px;border-radius:4px;border:1.5px solid #d1d5db;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;">
-                        </div>
-                        <span style="font-family:Montserrat,sans-serif;font-size:12px;color:#374151;font-weight:400;">{{ $option->label ?? $option->admin_name }}</span>
-                    </div>
-                @endforeach
-            </div>
-        </div>
 
     </div>{{-- end body --}}
 
