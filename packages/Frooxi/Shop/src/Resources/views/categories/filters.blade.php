@@ -133,14 +133,15 @@
                 </div>
 
                 <!-- Filters Items Vue Component -->
-                <v-filter-item
-                    ref="filterItemComponent"
-                    :key="filterIndex"
-                    :filter="filter"
-                    v-for='(filter, filterIndex) in filters.available'
-                    @values-applied="applyFilter(filter, $event)"
-                >
-                </v-filter-item>
+                <template v-for="(filter, filterIndex) in filters.available" :key="filterIndex">
+                    <v-filter-item
+                        v-if="!['color', 'sleeve'].includes(filter.code)"
+                        ref="filterItemComponent"
+                        :filter="filter"
+                        @values-applied="applyFilter(filter, $event)"
+                    >
+                    </v-filter-item>
+                </template>
             </div>
         </template>
     </script>

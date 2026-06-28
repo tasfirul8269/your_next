@@ -37,7 +37,7 @@ class FlashSaleController extends Controller
      */
     public function create()
     {
-        return view('admin::storefront.flash-sale.index', ['create_flash_sale' => 1]);
+        return view('admin::storefront.flash-sale.create');
     }
 
     /**
