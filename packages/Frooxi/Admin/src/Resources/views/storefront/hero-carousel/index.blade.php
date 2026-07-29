@@ -33,7 +33,7 @@
 
                     <div
                         class="primary-button"
-                        @click="selectedSlide = {}; $refs.slideModal.toggle()"
+                        @click="addSlide()"
                     >
                         Add New Slide
                     </div>
@@ -294,13 +294,32 @@
                             type: 'image',
                             category_id: ''
                         },
+                        rootCategoryId: '',
                         previewUrl: null,
                         selectedFile: null,
                         isProcessing: false,
                     }
                 },
 
+                created() {
+                    // Default the banner category to the Root category (level 0) so a
+                    // slide can be created without manually picking one.
+                    const root = this.categories.find(category => category.level === 0);
+                    this.rootCategoryId = root ? root.id : '';
+                    this.selectedSlide.category_id = this.rootCategoryId;
+                },
+
                 methods: {
+                    addSlide() {
+                        this.selectedSlide = {
+                            type: 'image',
+                            category_id: this.rootCategoryId,
+                        };
+                        this.previewUrl = null;
+                        this.selectedFile = null;
+                        this.$refs.slideModal.toggle();
+                    },
+
                     changeChannel() {
                         window.location.href = "{{ route('admin.storefront.hero_carousel.index') }}?channel_id=" + this.channelId;
                     },
