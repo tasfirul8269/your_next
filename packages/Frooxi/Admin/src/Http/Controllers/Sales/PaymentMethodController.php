@@ -65,10 +65,12 @@ class PaymentMethodController extends Controller
         foreach (self::METHODS as $code) {
             $method = request($code, []);
 
+            // Each toggle has a hidden "0" input paired with the "1" checkbox, so the
+            // key is always present — read the actual submitted value instead of isset().
             $entry = [
-                'active' => isset($method['active']) ? 1 : 0,
+                'active' => filter_var($method['active'] ?? 0, FILTER_VALIDATE_BOOLEAN) ? 1 : 0,
                 'title' => $method['title'] ?? '',
-                'sandbox' => isset($method['sandbox']) ? 1 : 0,
+                'sandbox' => filter_var($method['sandbox'] ?? 0, FILTER_VALIDATE_BOOLEAN) ? 1 : 0,
             ];
 
             if ($code === 'sslcommerz') {

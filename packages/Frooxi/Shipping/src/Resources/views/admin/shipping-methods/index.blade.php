@@ -138,13 +138,23 @@
                             @lang('shipping::app.status')
                         </x-admin::form.control-group.label>
 
-                        <x-admin::form.control-group.control
-                            type="switch"
-                            name="status"
-                            value="1"
-                            id="statusField"
-                            :label="trans('shipping::app.status')"
-                        />
+                        {{-- Native checkbox toggle so the modal's vanilla JS can reliably
+                             control the checked state. The hidden "0" input ensures an
+                             unchecked toggle still submits a value. --}}
+                        <label class="relative inline-flex cursor-pointer items-center">
+                            <input type="hidden" name="status" value="0">
+
+                            <input
+                                type="checkbox"
+                                name="status"
+                                value="1"
+                                id="statusField"
+                                class="peer sr-only"
+                                checked
+                            >
+
+                            <div class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:border-gray-600 dark:bg-gray-700"></div>
+                        </label>
                     </x-admin::form.control-group>
                 </div>
 
@@ -266,9 +276,9 @@
             
             var statusField = document.getElementById('statusField');
             if (statusField) {
-                statusField.value = '1';
+                statusField.checked = true;
             }
-            
+
             var modal = document.getElementById('shippingMethodModal');
             if (modal) {
                 modal.classList.remove('hidden');
@@ -323,7 +333,7 @@
                 
                 var statusField = document.getElementById('statusField');
                 if (statusField) {
-                    statusField.value = method.status.includes('Enable') ? '1' : '0';
+                    statusField.checked = method.status.includes('Enable');
                 }
                 
                 var modal = document.getElementById('shippingMethodModal');
