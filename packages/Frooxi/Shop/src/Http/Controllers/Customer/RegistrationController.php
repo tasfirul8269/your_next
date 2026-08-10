@@ -66,8 +66,10 @@ class RegistrationController extends Controller
         ]);
 
         // If the admin has disabled OTP verification, create the account directly
-        // without sending an OTP.
-        if (! (bool) core()->getConfigData('customer.settings.otp_verification.status')) {
+        // without sending an OTP. Defaults to enabled when never configured.
+        $otpStatus = core()->getConfigData('customer.settings.otp_verification.status');
+
+        if ($otpStatus !== null && ! (bool) $otpStatus) {
             return $this->createVerifiedCustomer($data);
         }
 
