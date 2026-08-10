@@ -19,6 +19,12 @@ class Customer extends Base
      */
     public function afterCreated($customer)
     {
+        // Customers can register with a phone number and no email address.
+        // Skip email notifications entirely when there is no address to send to.
+        if (empty($customer->email)) {
+            return;
+        }
+
         if (core()->getConfigData('customer.settings.email.verification')) {
             try {
                 if (! core()->getConfigData('customer.settings.email.verification')) {

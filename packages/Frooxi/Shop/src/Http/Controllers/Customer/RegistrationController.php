@@ -120,10 +120,6 @@ class RegistrationController extends Controller
         Event::dispatch('customer.create.after', $customer);
         Event::dispatch('customer.registration.after', $customer);
 
-        if ((bool) core()->getConfigData('emails.general.notifications.emails.general.notifications.registration')) {
-            Mail::queue(new RegistrationNotification($customer));
-        }
-
         $this->customerRepository->syncNewRegisteredCustomerInformation($customer);
 
         // Auto-login the customer.
