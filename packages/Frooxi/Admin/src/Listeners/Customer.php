@@ -21,7 +21,9 @@ class Customer extends Base
             }
 
             Mail::queue(new RegistrationNotification($customer));
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            // Never let a mail misconfiguration (e.g. missing admin email) break
+            // customer registration.
             report($e);
         }
     }

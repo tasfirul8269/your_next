@@ -32,7 +32,7 @@ class Customer extends Base
                 }
 
                 Mail::queue(new EmailVerificationNotification($customer));
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 \Log::info('EmailVerificationNotification Error');
 
                 report($e);
@@ -47,7 +47,7 @@ class Customer extends Base
             }
 
             Mail::queue(new RegistrationNotification($customer));
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             report($e);
         }
     }
