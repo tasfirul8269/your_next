@@ -40,6 +40,11 @@ class SettingsPageController extends Controller
             // Order Settings
             'order_prefix' => core()->getConfigData('sales.order_settings.order_number.order_number_prefix', $channelCode),
             'min_order_amount' => core()->getConfigData('sales.order_settings.minimum_order.minimum_order_amount', $channelCode),
+
+            // Customer Settings — OTP verification defaults to ON when never configured.
+            'otp_verification' => core()->getConfigData('customer.settings.otp_verification.status') === null
+                ? 1
+                : core()->getConfigData('customer.settings.otp_verification.status'),
         ];
 
         return view('admin::settings.index', compact('settings', 'channel', 'channelCode', 'localeCode'));
@@ -94,6 +99,14 @@ class SettingsPageController extends Controller
                 'inventory' => [
                     'stock_options' => [
                         'back_orders' => request('show_out_of_stock', 0),
+                    ],
+                ],
+            ],
+
+            'customer' => [
+                'settings' => [
+                    'otp_verification' => [
+                        'status' => request('otp_verification', 0),
                     ],
                 ],
             ],

@@ -991,20 +991,6 @@ return [
             ],
         ],
     ], [
-        'key' => 'customer.settings.otp_verification',
-        'name' => 'admin::app.configuration.index.customer.settings.otp-verification.title',
-        'info' => 'admin::app.configuration.index.customer.settings.otp-verification.title-info',
-        'sort' => 6,
-        'fields' => [
-            [
-                'name' => 'status',
-                'title' => 'admin::app.configuration.index.customer.settings.otp-verification.status',
-                'info' => 'admin::app.configuration.index.customer.settings.otp-verification.status-info',
-                'type' => 'boolean',
-                'default' => 1,
-            ],
-        ],
-    ], [
         'key' => 'customer.settings.login_options',
         'name' => 'admin::app.configuration.index.customer.settings.login-options.title',
         'info' => 'admin::app.configuration.index.customer.settings.login-options.title-info',

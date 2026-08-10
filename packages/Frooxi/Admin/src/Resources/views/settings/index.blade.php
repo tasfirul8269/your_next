@@ -295,6 +295,64 @@
                 </div>
             </div>
 
+            {{-- ═══════════════════════════════════════════ --}}
+            {{-- Section 4 · Customer Settings               --}}
+            {{-- ═══════════════════════════════════════════ --}}
+            <div class="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+                <!-- Section header -->
+                <div class="mb-5 flex items-start gap-3">
+                    <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-900/30">
+                        <span class="icon-customer-2 text-xl text-amber-600 dark:text-amber-400"></span>
+                    </div>
+
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                            Customer Settings
+                        </h2>
+
+                        <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+                            Control how customers sign up and log in
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Fields -->
+                <div class="grid grid-cols-1 gap-4">
+                    <!-- OTP Verification (toggle) -->
+                    <div class="pt-1">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    OTP Verification
+                                </p>
+
+                                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                    When enabled, customers must verify their phone number with an OTP during sign-up. When disabled, accounts are created without OTP verification.
+                                </p>
+                            </div>
+
+                            <label class="relative inline-flex cursor-pointer items-center">
+                                <input
+                                    type="hidden"
+                                    name="otp_verification"
+                                    value="0"
+                                >
+
+                                <input
+                                    type="checkbox"
+                                    name="otp_verification"
+                                    value="1"
+                                    class="peer sr-only"
+                                    {{ old('otp_verification', $settings['otp_verification']) ? 'checked' : '' }}
+                                >
+
+                                <div class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-amber-500 peer-checked:after:translate-x-full peer-checked:after:border-white dark:border-gray-600 dark:bg-gray-700 dark:peer-checked:bg-amber-500"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div><!-- /.space-y-6 -->
 
         {{-- ═══════════════════════════════════════════════════ --}}
