@@ -65,6 +65,12 @@ class RegistrationController extends Controller
             'token' => md5(uniqid(rand(), true)),
         ]);
 
+        // If the admin has disabled OTP verification, create the account directly
+        // without sending an OTP.
+        if (! (bool) core()->getConfigData('customer.settings.otp_verification.status')) {
+            return $this->createVerifiedCustomer($data);
+        }
+
         // Generate OTP
         $otpData = $this->otpService->generateOtp($data['phone']);
 
@@ -91,6 +97,39 @@ class RegistrationController extends Controller
         Event::dispatch('customer.registration.before');
 
         return redirect()->route('shop.customers.verify-otp');
+    }
+
+    /**
+     * Create a customer account directly, bypassing OTP verification.
+     * Used when the admin has disabled OTP verification.
+     *
+     * @return RedirectResponse
+     */
+    protected function createVerifiedCustomer(array $data)
+    {
+        // No OTP step, so the account is considered verified immediately.
+        $data['is_verified'] = 1;
+        $data['token'] = null;
+
+        Event::dispatch('customer.registration.before');
+
+        $customer = $this->customerRepository->create($data);
+
+        Event::dispatch('customer.create.after', $customer);
+        Event::dispatch('customer.registration.after', $customer);
+
+        if ((bool) core()->getConfigData('emails.general.notifications.emails.general.notifications.registration')) {
+            Mail::queue(new RegistrationNotification($customer));
+        }
+
+        $this->customerRepository->syncNewRegisteredCustomerInformation($customer);
+
+        // Auto-login the customer.
+        auth()->guard('customer')->login($customer);
+
+        session()->flash('success', 'Your account has been created successfully!');
+
+        return redirect()->route('shop.customers.account.profile.index');
     }
 
     /**

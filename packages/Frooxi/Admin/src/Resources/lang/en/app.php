@@ -4545,6 +4545,13 @@ return [
                         'title-info' => 'Configure login options to determine the redirect page for customers after login.',
                     ],
 
+                    'otp-verification' => [
+                        'status' => 'Enable OTP Verification',
+                        'status-info' => 'When enabled, customers must verify their phone number with an OTP during sign-up. When disabled, accounts are created without OTP verification.',
+                        'title' => 'OTP Verification',
+                        'title-info' => 'Turn phone OTP verification on or off for customer sign-up.',
+                    ],
+
                     'create-new-account-option' => [
                         'news-letter' => 'Allow NewsLetter',
                         'news-letter-info' => 'Enable newsletter subscription option on the sign-up page.',
