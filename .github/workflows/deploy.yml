@@ -87,4 +87,8 @@ jobs:
             docker compose -f docker-compose.prod.yml exec -T app php artisan migrate --force
             docker compose -f docker-compose.prod.yml exec -T app php artisan optimize:clear
             docker compose -f docker-compose.prod.yml exec -T app php artisan optimize
+            # The artisan commands above run as root and can leave storage dirs owned by
+            # root, so php-fpm (www-data) can no longer write the file cache. Recreate the
+            # writable storage skeleton and hand ownership back to www-data.
+            docker compose -f docker-compose.prod.yml exec -T app sh -c 'mkdir -p storage/framework/cache/data storage/framework/views storage/framework/sessions && chown -R www-data:www-data storage bootstrap/cache && chmod -R 775 storage bootstrap/cache'
             docker image prune -f
